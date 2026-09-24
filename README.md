@@ -57,6 +57,17 @@ See [projects/](projects/) for five complete example sites (a personal
 site, a blog, a blog in three languages, a docs site, and a themed
 landing page), each is a real project you can `cd` into and build.
 
+## Building with AI
+
+[CLAUDE.md](CLAUDE.md) is a complete, self-contained reference to NeyX:
+every CLI command and flag, the full `neyx.config.yml` format, front
+matter fields, the entire template engine syntax and every filter, themes,
+hooks, multi-language routing, taxonomies, and worked examples for a blog,
+a docs site, a multi-language blog, and a themed landing page. Point an AI
+coding assistant at it (Claude Code reads it automatically from the repo
+root) and it has everything needed to scaffold and build a real site with
+NeyX without reading any source code.
+
 ## Commands
 
 | Command | Description |
