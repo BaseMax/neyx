@@ -11,7 +11,7 @@ Static sites. Native speed. Written in Salam.
 ## Building Neyx
 
 ```bash
-salam build neyx.salam --output=neyx
+salam build
 ```
 
 ## Usage
