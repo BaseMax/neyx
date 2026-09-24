@@ -105,6 +105,7 @@ func render_page(site: config.Site, page: p.Page, pages: Vector<p.Page>, posts: 
 
     mut root := value.ValueClone(page.front)
     value.ObjectSet(root, "content", value.ValueString(page.content_html))
+    value.ObjectSet(root, "toc", value.ValueString(page.toc_html))
     value.ObjectSet(root, "url", value.ValueString(page.route))
     value.ObjectSet(root, "site", site.data)
     value.ObjectSet(root, "pages", pages_value(scoped_pages))
@@ -165,6 +166,7 @@ func write_paginated(site: config.Site, page: p.Page, pages: Vector<p.Page>, pos
         lang := effective_lang(site, page)
         mut root := value.ValueClone(page.front)
         value.ObjectSet(root, "content", value.ValueString(page.content_html))
+        value.ObjectSet(root, "toc", value.ValueString(page.toc_html))
         value.ObjectSet(root, "url", value.ValueString(route))
         value.ObjectSet(root, "site", site.data)
         value.ObjectSet(root, "pages", all_val)
