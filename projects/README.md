@@ -1,6 +1,6 @@
 # Example projects
 
-Five small, real NeyX projects, each built and checked with
+Six small, real NeyX projects, each built and checked with
 `neyx build` / `neyx check` and showing a different slice of what NeyX
 does. Every one is self-contained: `cd` into it and run `neyx build`
 or `neyx dev`.
@@ -12,6 +12,7 @@ or `neyx dev`.
 | [blog-i18n](blog-i18n/) | The same blog in English, Persian, and Arabic: automatic RTL, hreflang links between translated posts, per-language collections |
 | [docs-site](docs-site/) | Documentation: a sidebar from a data file, nested pages, client-side search, raw HTML mixed with Markdown |
 | [landing-page](landing-page/) | A one-page marketing site powered entirely by a theme (`themes/simple/`), with no project-level layouts or assets at all |
+| [conference](conference/) | A five-page conference site built entirely from `data/` files (speakers, schedule, tickets, sponsors), with shared header/footer via `{{ include }}` |
 
 ## Try one
 

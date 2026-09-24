@@ -144,9 +144,10 @@ Invalid inputs degrade gracefully: string filters on a number stringify it first
 - **Docs site**: `data/nav.yml` listing sections, rendered as nested `{{ each }}` in the layout; nested `content/guide/*.md` pages; the search widget.
 - **Multi-language blog**: `languages: ["en", "fa", "ar"]`, mirrored `content/<lang>/posts/` filenames, `{{ dir }}` for automatic RTL, `{{ each t in translations }}` as a language switcher.
 - **Themed landing page**: no project `layouts/`/`assets/`, everything in `themes/simple/`, `content/index.md` mixing raw HTML sections directly into Markdown (untouched HTML passes through).
+- **Conference/event site**: multiple `data/*.yml` files (speakers, schedule, ticket tiers, sponsors) each rendered with `{{ each }}` across their own pages (`layouts/schedule.html`, `layouts/speakers.html`, `layouts/register.html`), a shared header and footer pulled into every layout with `{{ include "_nav.html" }}` and `{{ include "_footer.html" }}`, and a home page teaser that shows only the first 3 speakers with `{{ each s in data.speakers.speakers }}{{ if loop.index < 3 }}...{{ end }}{{ end }}`.
 
 ---
 
 ## Where to look for more
 
-Everything above is enough to build a complete NeyX site. If something unusual comes up that isn't covered here, the source is public at https://github.com/BaseMax/neyx, and `projects/` in that repo has five complete, real example sites (personal site, blog, multi-language blog, docs site, themed landing page) worth reading for reference, though none of that is required for normal use.
+Everything above is enough to build a complete NeyX site. If something unusual comes up that isn't covered here, the source is public at https://github.com/BaseMax/neyx, and `projects/` in that repo has six complete, real example sites (personal site, blog, multi-language blog, docs site, themed landing page, conference site) worth reading for reference, though none of that is required for normal use.

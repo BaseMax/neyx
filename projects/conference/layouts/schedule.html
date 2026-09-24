@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="{{ lang }}" dir="{{ dir }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ title }} - {{ site.title }}</title>
+{{ if description }}<meta name="description" content="{{ description }}">{{ end }}
+<link rel="canonical" href="{{ site.url }}{{ url }}">
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+{{ include "_nav.html" }}
+<main class="page">
+<h1>{{ title }}</h1>
+
+{{ each day in data.schedule.days }}
+<section class="schedule-day">
+<h2>{{ day.label }} &middot; {{ day.date }}</h2>
+<ol class="session-list">
+{{ each session in day.sessions }}
+<li class="session session-{{ session.kind }}">
+<span class="session-time">{{ session.time }}</span>
+<span class="session-title">{{ session.title }}</span>
+{{ if session.speaker }}<span class="session-speaker">{{ session.speaker }}</span>{{ end }}
+</li>
+{{ end }}
+</ol>
+</section>
+{{ end }}
+
+</main>
+{{ include "_footer.html" }}
+</body>
+</html>

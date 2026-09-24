@@ -20,7 +20,7 @@
 | --- | --- |
 | ![personal-website](projects/personal-website/screenshot.webp)<br>**[personal-website](projects/personal-website/):** a single-language personal site: plain pages, a data-driven nav, no dates or collections. | ![blog](projects/blog/screenshot.webp)<br>**[blog](projects/blog/):** a single-language blog: tags, pagination, drafts, RSS/Atom feeds, a table of contents. |
 | ![blog-i18n](projects/blog-i18n/screenshot.webp)<br>**[blog-i18n](projects/blog-i18n/):** the same blog in English, Persian, and Arabic: automatic RTL, hreflang links between translated posts, per-language collections. | ![docs-site](projects/docs-site/screenshot.webp)<br>**[docs-site](projects/docs-site/):** documentation: a sidebar from a data file, nested pages, client-side search, raw HTML mixed with Markdown. |
-| ![landing-page](projects/landing-page/screenshot.webp)<br>**[landing-page](projects/landing-page/):** a one-page marketing site powered entirely by a theme (`themes/simple/`), with no project-level layouts or assets at all. | |
+| ![landing-page](projects/landing-page/screenshot.webp)<br>**[landing-page](projects/landing-page/):** a one-page marketing site powered entirely by a theme (`themes/simple/`), with no project-level layouts or assets at all. | ![conference](projects/conference/screenshot.webp)<br>**[conference](projects/conference/):** a five-page conference site built entirely from `data/` files: speakers, schedule, ticket tiers, and sponsors. |
 
 ## Install
 
@@ -61,9 +61,10 @@ neyx build
 neyx preview
 ```
 
-See [projects/](projects/) for five complete example sites (a personal
-site, a blog, a blog in three languages, a docs site, and a themed
-landing page), each is a real project you can `cd` into and build.
+See [projects/](projects/) for six complete example sites (a personal
+site, a blog, a blog in three languages, a docs site, a themed landing
+page, and a conference site), each is a real project you can `cd` into
+and build.
 
 ## Building with AI
 

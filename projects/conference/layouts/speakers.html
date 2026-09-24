@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="{{ lang }}" dir="{{ dir }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ title }} - {{ site.title }}</title>
+{{ if description }}<meta name="description" content="{{ description }}">{{ end }}
+<link rel="canonical" href="{{ site.url }}{{ url }}">
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+{{ include "_nav.html" }}
+<main class="page">
+<h1>{{ title }}</h1>
+
+<div class="speaker-grid">
+{{ each s in data.speakers.speakers }}
+<article class="speaker-card">
+<h3>{{ s.name }}</h3>
+<p class="speaker-role">{{ s.role }}</p>
+<p class="speaker-talk">{{ s.talk }}</p>
+<p class="speaker-bio">{{ s.bio }}</p>
+</article>
+{{ end }}
+</div>
+
+</main>
+{{ include "_footer.html" }}
+</body>
+</html>

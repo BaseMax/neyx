@@ -1,0 +1,11 @@
+tiers:
+  - name: "Platinum"
+    companies:
+      - name: "Orbit"
+        url: "https://orbit.example"
+  - name: "Gold"
+    companies:
+      - name: "Ledgerline"
+        url: "https://ledgerline.example"
+      - name: "Nimbus Cloud"
+        url: "https://nimbus.example"

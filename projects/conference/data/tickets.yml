@@ -1,0 +1,19 @@
+tiers:
+  - name: "Individual"
+    price: "EUR 249"
+    perks:
+      - "Both days"
+      - "Recordings after the event"
+      - "Lunch included"
+  - name: "Team (4+)"
+    price: "EUR 199 / seat"
+    perks:
+      - "4 seats minimum"
+      - "Both days"
+      - "Recordings after the event"
+      - "Lunch included"
+  - name: "Student"
+    price: "EUR 79"
+    perks:
+      - "Both days"
+      - "Valid student ID required at check-in"

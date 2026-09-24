@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="{{ lang }}" dir="{{ dir }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ site.title }} - {{ tagline }}</title>
+{{ if description }}<meta name="description" content="{{ description }}">{{ end }}
+<link rel="canonical" href="{{ site.url }}{{ url }}">
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+{{ include "_nav.html" }}
+<main class="page">
+
+<section class="hero">
+<p class="eyebrow">{{ dates }} &middot; {{ location }}</p>
+<h1>{{ tagline }}</h1>
+<a class="btn" href="/register/">Get a ticket</a>
+</section>
+
+{{ & content }}
+
+<section class="teaser">
+<h2>Featured speakers</h2>
+<div class="speaker-grid">
+{{ each s in data.speakers.speakers }}{{ if loop.index < 3 }}
+<article class="speaker-card">
+<h3>{{ s.name }}</h3>
+<p class="speaker-role">{{ s.role }}</p>
+<p class="speaker-talk">{{ s.talk }}</p>
+</article>
+{{ end }}{{ end }}
+</div>
+<a class="link-more" href="/speakers/">See all {{ data.speakers.speakers | length }} speakers &rarr;</a>
+</section>
+
+<section class="teaser">
+<h2>Schedule</h2>
+<p>{{ data.schedule.days | length }} days, {{ data.schedule.days.0.sessions | length }} sessions on day one alone.</p>
+<a class="link-more" href="/schedule/">See the full schedule &rarr;</a>
+</section>
+
+</main>
+{{ include "_footer.html" }}
+</body>
+</html>

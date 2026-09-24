@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="{{ lang }}" dir="{{ dir }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ title }} - {{ site.title }}</title>
+{{ if description }}<meta name="description" content="{{ description }}">{{ end }}
+<link rel="canonical" href="{{ site.url }}{{ url }}">
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+{{ include "_nav.html" }}
+<main class="page">
+<h1>{{ title }}</h1>
+
+<div class="ticket-grid">
+{{ each tier in data.tickets.tiers }}
+<article class="ticket-card">
+<h3>{{ tier.name }}</h3>
+<p class="ticket-price">{{ tier.price }}</p>
+<ul class="ticket-perks">
+{{ each perk in tier.perks }}<li>{{ perk }}</li>{{ end }}
+</ul>
+<a class="btn btn-block" href="mailto:hello@signalconf.example?subject=SignalConf%20{{ tier.name }}%20ticket">Buy</a>
+</article>
+{{ end }}
+</div>
+
+{{ & content }}
+
+<section class="sponsors">
+<h2>Sponsors</h2>
+{{ each tier in data.sponsors.tiers }}
+<div class="sponsor-tier">
+<p class="sponsor-tier-name">{{ tier.name }}</p>
+<ul class="sponsor-list">
+{{ each c in tier.companies }}<li><a href="{{ c.url }}" target="_blank" rel="noopener">{{ c.name }}</a></li>{{ end }}
+</ul>
+</div>
+{{ end }}
+</section>
+
+</main>
+{{ include "_footer.html" }}
+</body>
+</html>
