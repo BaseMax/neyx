@@ -101,7 +101,9 @@ pub func Run(args: Vector<str>):
     site := config.Load("neyx.config.yml")
     port := flag.GetStr(fs, "port")
 
-    mut build_cmd := "neyx build --pretty --no-images"
+    self_args := os.Args()
+    self_path := self_args.get(0)
+    mut build_cmd := "\"" + self_path + "\" build --pretty --no-images"
     if include_drafts:
         build_cmd = build_cmd + " --drafts"
     end
