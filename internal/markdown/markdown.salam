@@ -79,6 +79,22 @@ pub func ToHtml(body: str, toc_out &: str, html_out &: str):
             continue
         end
 
+        if str.StartsWith(str.Trim(line), "|") && i + 1 < n && blk.IsTableSeparator(lines.get(i + 1)):
+            blk.FlushOpenBlock(html, para_lines, list_kind, list_items, quote_lines)
+            header_line := line
+            i += 2
+            mut table_body := Vector {} as Vector<str>
+            while i < n:
+                body_line := str.TrimSuffix(lines.get(i), "\r")
+                if !str.StartsWith(str.Trim(body_line), "|"): break end
+                table_body.push(body_line)
+                i += 1
+            end
+            blk.RenderTable(html, header_line, table_body)
+            table_body.free()
+            continue
+        end
+
         if str.StartsWith(line, "<") && !str.StartsWith(line, "<!--"):
             blk.FlushOpenBlock(html, para_lines, list_kind, list_items, quote_lines)
             while i < n:

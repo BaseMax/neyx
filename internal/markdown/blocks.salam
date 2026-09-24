@@ -24,6 +24,19 @@ func render_list_item(sb &: str.StringBuilder, item: str):
     str.BufAppend(sb, "</li>\n")
 end
 
+func split_row(line: str): Vector<str>:
+    mut t := str.Trim(line)
+    if str.StartsWith(t, "|"): t = t.substr(1, t.len() - 1) end
+    if str.EndsWith(t, "|"): t = t.substr(0, t.len() - 1) end
+    parts := str.Split(t, "|")
+    mut out := Vector {} as Vector<str>
+    repeat parts.len() with i:
+        out.push(str.Trim(parts.get(i)))
+    end
+    parts.free()
+    ret out
+end
+
 pub func IsAllDigits(s: str): bool:
     n := s.len()
     if n == 0: ret false end
@@ -141,4 +154,48 @@ pub func RenderCallout(sb &: str.StringBuilder, kind: str, lines: Vector<str>):
         str.BufAppend(sb, "</p>\n")
     end
     str.BufAppend(sb, "</div>\n\n")
+end
+
+pub func IsTableSeparator(line: str): bool:
+    t := str.Trim(line)
+    if t == "": ret false end
+    mut has_dash := false
+    n := t.len()
+    mut i := 0
+    while i < n:
+        c := t.substr(i, 1)
+        if c == "-":
+            has_dash = true
+        else:
+            if c != "|" && c != ":" && c != " ":
+                ret false
+            end
+        end
+        i += 1
+    end
+    ret has_dash
+end
+
+pub func RenderTable(sb &: str.StringBuilder, header_line: str, body_lines: Vector<str>):
+    headers := split_row(header_line)
+    defer headers.free()
+    str.BufAppend(sb, "<table>\n<thead>\n<tr>")
+    repeat headers.len() with i:
+        str.BufAppend(sb, "<th>")
+        str.BufAppend(sb, inl.InlineHtml(headers.get(i)))
+        str.BufAppend(sb, "</th>")
+    end
+    str.BufAppend(sb, "</tr>\n</thead>\n<tbody>\n")
+    repeat body_lines.len() with r:
+        cells := split_row(body_lines.get(r))
+        str.BufAppend(sb, "<tr>")
+        repeat cells.len() with c:
+            str.BufAppend(sb, "<td>")
+            str.BufAppend(sb, inl.InlineHtml(cells.get(c)))
+            str.BufAppend(sb, "</td>")
+        end
+        str.BufAppend(sb, "</tr>\n")
+        cells.free()
+    end
+    str.BufAppend(sb, "</tbody>\n</table>\n\n")
 end
