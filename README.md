@@ -33,7 +33,7 @@ neyx preview
 | `neyx init` | Scaffold a project in the current (empty) directory |
 | `neyx new post <title>` | Create a new dated post under `content/posts/` |
 | `neyx build [--drafts] [--pretty] [--no-images] [--json]` | Build the site into the output directory |
-| `neyx dev [--port] [--drafts]` | Build and serve the site |
+| `neyx dev [--port] [--drafts]` | Build, serve, and rebuild automatically on changes |
 | `neyx preview [--port]` | Serve an existing production build |
 | `neyx clean` | Remove the output directory |
 | `neyx check` | Check the build for broken links, missing assets, missing alt text, and duplicate routes |
@@ -47,7 +47,9 @@ neyx preview
 output), generates responsive JPEG/PNG variants at 480/960/1440px (`--no-images`
 to skip), and can print a single-line JSON summary instead of the normal log
 (`--json`, handy for CI). `neyx dev` always builds with `--pretty --no-images`
-for fast iteration.
+for fast iteration, then watches `content/`, `layouts/`, `assets/`, `data/`,
+`static/`, the active theme, and `neyx.config.yml`, rebuilding automatically
+whenever something changes, until you stop it with Ctrl+C.
 
 ## Project layout
 
