@@ -11,6 +11,7 @@ import tmpl "../tmpl/tmpl.salam"
 import sitemap "../sitemap/sitemap.salam"
 import feed "../feed/feed.salam"
 import taxonomy "../taxonomy/taxonomy.salam"
+import data "../data/data.salam"
 
 const DEFAULT_LAYOUT := "<!doctype html>\n<html lang=\"{{ site.language }}\">\n<head>\n<meta charset=\"utf-8\">\n<title>{{ title }}</title>\n{{ if description }}<meta name=\"description\" content=\"{{ description }}\">{{ end }}\n</head>\n<body>\n{{ & content }}\n</body>\n</html>\n"
 
@@ -58,19 +59,20 @@ func pages_value(pages: Vector<p.Page>): value.Value:
     ret arr
 end
 
-func render_page(site: config.Site, page: p.Page, all_val: value.Value, posts_val: value.Value): str:
+func render_page(site: config.Site, page: p.Page, all_val: value.Value, posts_val: value.Value, data_val: value.Value): str:
     mut root := value.ValueClone(page.front)
     value.ObjectSet(root, "content", value.ValueString(page.content_html))
     value.ObjectSet(root, "url", value.ValueString(page.route))
     value.ObjectSet(root, "site", site.data)
     value.ObjectSet(root, "pages", all_val)
     value.ObjectSet(root, "posts", posts_val)
+    value.ObjectSet(root, "data", data_val)
     tpl_text := layout_for(site, page.tmpl)
     ret tmpl.Render(tpl_text, root)
 end
 
-func write_page(site: config.Site, page: p.Page, all_val: value.Value, posts_val: value.Value):
-    html := render_page(site, page, all_val, posts_val)
+func write_page(site: config.Site, page: p.Page, all_val: value.Value, posts_val: value.Value, data_val: value.Value):
+    html := render_page(site, page, all_val, posts_val, data_val)
     dir := site.output + page.route
     os.MkdirAll(dir)
     io.WriteFile(dir + "index.html", html)
@@ -101,12 +103,13 @@ pub func Run(_args: Vector<str>):
 
     all_val := pages_value(pages)
     posts_val := pages_value(posts)
+    data_val := data.LoadAll(site.data_dir)
 
     os.RemoveAll(site.output)
     os.MkdirAll(site.output)
 
     repeat pages.len() with i:
-        write_page(site, pages.get(i), all_val, posts_val)
+        write_page(site, pages.get(i), all_val, posts_val, data_val)
     end
 
     if os.IsDir(site.assets_dir):

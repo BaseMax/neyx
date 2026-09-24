@@ -1,0 +1,36 @@
+package data
+
+import os
+import io
+import str
+import filepath
+import encoding.value
+import encoding.encerr
+import encoding.yaml
+import encoding.json
+
+func load_one(path: str): value.Value:
+    text := io.ReadFile(path)
+    mut err := encerr.NoError()
+    if str.EndsWith(path, ".json"):
+        ret json.Decode(text, err)
+    end
+    ret yaml.Decode(text, err)
+end
+
+pub func LoadAll(dir: str): value.Value:
+    mut out := value.NewValueObject()
+    if !os.IsDir(dir): ret out end
+
+    names := os.ListDir(dir)
+    defer names.free()
+    each name in names:
+        full := filepath.Join(dir, name)
+        is_data := str.EndsWith(name, ".yml") || str.EndsWith(name, ".yaml") || str.EndsWith(name, ".json")
+        if !os.IsDir(full) && is_data:
+            key := filepath.Stem(name)
+            value.ObjectSet(out, key, load_one(full))
+        end
+    end
+    ret out
+end
