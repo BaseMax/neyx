@@ -1,0 +1,14 @@
+package clean
+
+import os
+import config "../config/config.salam"
+
+pub func Run(_args: Vector<str>):
+    site := config.Load("neyx.config.yml")
+    if os.IsDir(site.output):
+        os.RemoveAll(site.output)
+        println "removed", site.output
+    else:
+        println "nothing to clean"
+    end
+end

@@ -7,6 +7,7 @@ import newcmd "../scaffold/new.salam"
 import buildcmd "../build/builder.salam"
 import devcmd "../dev/dev.salam"
 import previewcmd "../preview/preview.salam"
+import cleancmd "../clean/clean.salam"
 
 const VERSION := "0.1.0"
 
@@ -23,16 +24,6 @@ func new_app(): cli.App:
     cli.Register(app, "preview", "Preview the production build")
     cli.Register(app, "clean", "Remove the output directory")
     ret app
-end
-
-func run_clean(_args: Vector<str>):
-    out := "dist"
-    if os.IsDir(out):
-        os.RemoveAll(out)
-        println "removed", out
-    else:
-        println "nothing to clean"
-    end
 end
 
 pub func Run(process_argv: Vector<str>):
@@ -72,7 +63,7 @@ pub func Run(process_argv: Vector<str>):
     end
 
     if cmd == "clean":
-        run_clean(rest)
+        cleancmd.Run(rest)
         ret
     end
 
