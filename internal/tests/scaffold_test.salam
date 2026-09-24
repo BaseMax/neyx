@@ -1,0 +1,34 @@
+package scaffoldtest
+
+import os
+import testing
+import scaffold "../scaffold/new.salam"
+
+func test_new_project_assets():
+    start_dir := os.Cwd()
+    tmp := os.TempDir()
+    os.Chdir(tmp)
+
+    project := "neyx-scaffold-test-project"
+    os.RemoveAll(project)
+
+    mut args := Vector {} as Vector<str>
+    args.push(project)
+    scaffold.Run(args)
+
+    testing.AssertTrue(os.Exists(project + "/neyx.config.yml"))
+    testing.AssertTrue(os.Exists(project + "/content/index.md"))
+    testing.AssertTrue(os.Exists(project + "/layouts/default.html"))
+
+    testing.AssertEqInt64(os.FileSize(project + "/assets/favicon.ico"), 7970)
+    testing.AssertEqInt64(os.FileSize(project + "/assets/favicon-light.png"), 4914)
+    testing.AssertEqInt64(os.FileSize(project + "/assets/favicon-dark.png"), 4644)
+    testing.AssertEqInt64(os.FileSize(project + "/assets/apple-touch-icon.png"), 43690)
+
+    os.Chdir(start_dir)
+    os.RemoveAll(tmp + "/" + project)
+end
+
+pub func Run():
+    test_new_project_assets()
+end

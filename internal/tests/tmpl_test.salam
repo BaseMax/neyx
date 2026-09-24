@@ -1,0 +1,191 @@
+package tmpltest
+
+import os
+import io
+import testing
+import encoding.value
+import tmpl "../tmpl/tmpl.salam"
+
+func obj(): value.Value:
+    mut root := value.NewValueObject()
+    value.ObjectSet(root, "title", value.ValueString("Hello <World>"))
+    value.ObjectSet(root, "count", value.ValueInt(5))
+    value.ObjectSet(root, "price", value.ValueFloat(2.5))
+    value.ObjectSet(root, "draft", value.ValueBool(false))
+    value.ObjectSet(root, "empty", value.ValueString(""))
+
+    mut tags := value.NewValueArray()
+    value.ArrayPush(tags, value.ValueString("go"))
+    value.ArrayPush(tags, value.ValueString("rust"))
+    value.ArrayPush(tags, value.ValueString("go"))
+    value.ArrayPush(tags, value.ValueString("ada"))
+    value.ObjectSet(root, "tags", tags)
+
+    mut nums := value.NewValueArray()
+    value.ArrayPush(nums, value.ValueInt(3))
+    value.ArrayPush(nums, value.ValueInt(1))
+    value.ArrayPush(nums, value.ValueInt(9))
+    value.ObjectSet(root, "nums", nums)
+
+    mut author := value.NewValueObject()
+    value.ObjectSet(author, "name", value.ValueString("Ali"))
+    value.ObjectSet(author, "role", value.ValueString("dev"))
+    value.ObjectSet(root, "author", author)
+
+    ret root
+end
+
+func test_output(root: value.Value):
+    testing.AssertEqStr(tmpl.Render("{{ title }}", root, ""), "Hello &lt;World&gt;")
+    testing.AssertEqStr(tmpl.Render("{{ & title }}", root, ""), "Hello <World>")
+    testing.AssertEqStr(tmpl.Render("plain text", root, ""), "plain text")
+    testing.AssertEqStr(tmpl.Render("a{{! a comment }}b", root, ""), "ab")
+    testing.AssertEqStr(tmpl.Render("{{ missing.field }}", root, ""), "")
+end
+
+func test_literals(root: value.Value):
+    testing.AssertEqStr(tmpl.Render("{{ \"hi\" }}", root, ""), "hi")
+    testing.AssertEqStr(tmpl.Render("{{ 'hi' }}", root, ""), "hi")
+    testing.AssertEqStr(tmpl.Render("{{ 42 }}", root, ""), "42")
+    testing.AssertEqStr(tmpl.Render("{{ true }}", root, ""), "true")
+    testing.AssertEqStr(tmpl.Render("{{ false }}", root, ""), "false")
+end
+
+func test_index_access(root: value.Value):
+    testing.AssertEqStr(tmpl.Render("{{ tags.0 }}", root, ""), "go")
+    testing.AssertEqStr(tmpl.Render("{{ tags.1 }}", root, ""), "rust")
+    testing.AssertEqStr(tmpl.Render("{{ tags.99 }}", root, ""), "")
+    testing.AssertEqStr(tmpl.Render("{{ author.name }}", root, ""), "Ali")
+end
+
+func test_if(root: value.Value):
+    testing.AssertEqStr(tmpl.Render("{{ if title }}yes{{ else }}no{{ end }}", root, ""), "yes")
+    testing.AssertEqStr(tmpl.Render("{{ if empty }}yes{{ else }}no{{ end }}", root, ""), "no")
+    testing.AssertEqStr(tmpl.Render("{{ if !draft }}live{{ else }}draft{{ end }}", root, ""), "live")
+    testing.AssertEqStr(tmpl.Render("{{ if draft }}draft{{ else }}live{{ end }}", root, ""), "live")
+    testing.AssertEqStr(tmpl.Render("{{ if true }}yes{{ else }}no{{ end }}", root, ""), "yes")
+    testing.AssertEqStr(tmpl.Render("{{ if false }}yes{{ else }}no{{ end }}", root, ""), "no")
+    testing.AssertEqStr(tmpl.Render("{{ if !true }}yes{{ else }}no{{ end }}", root, ""), "no")
+    testing.AssertEqStr(tmpl.Render("{{ if author.name == \"Ali\" }}match{{ end }}", root, ""), "match")
+    testing.AssertEqStr(tmpl.Render("{{ if author.name != \"Bob\" }}match{{ end }}", root, ""), "match")
+    testing.AssertEqStr(tmpl.Render("{{ if count > 3 }}big{{ else }}small{{ end }}", root, ""), "big")
+    testing.AssertEqStr(tmpl.Render("{{ if count < 3 }}big{{ else }}small{{ end }}", root, ""), "small")
+    testing.AssertEqStr(tmpl.Render("{{ if count >= 5 }}ok{{ end }}", root, ""), "ok")
+    testing.AssertEqStr(tmpl.Render("{{ if count <= 5 }}ok{{ end }}", root, ""), "ok")
+    testing.AssertEqStr(tmpl.Render("{{ if count == 5.0 }}f{{ end }}", root, ""), "")
+    testing.AssertEqStr(tmpl.Render("{{ if price > 2 }}ok{{ end }}", root, ""), "ok")
+    testing.AssertEqStr(tmpl.Render("{{ if count > 1 && count < 10 }}mid{{ end }}", root, ""), "mid")
+    testing.AssertEqStr(tmpl.Render("{{ if count > 100 && count < 10 }}mid{{ else }}no{{ end }}", root, ""), "no")
+    testing.AssertEqStr(tmpl.Render("{{ if count > 100 || author.name == \"Ali\" }}hit{{ end }}", root, ""), "hit")
+    testing.AssertEqStr(tmpl.Render("{{ if count > 100 || author.name == \"Bob\" }}hit{{ else }}miss{{ end }}", root, ""), "miss")
+    testing.AssertEqStr(tmpl.Render("{{ if nope }}a{{ else }}b{{ end }}", root, ""), "b")
+end
+
+func test_each(root: value.Value):
+    testing.AssertEqStr(tmpl.Render("{{ each t in tags }}[{{ t }}]{{ end }}", root, ""), "[go][rust][go][ada]")
+    testing.AssertEqStr(tmpl.Render("{{ each i, t in tags }}{{ i }}:{{ t }} {{ end }}", root, ""), "0:go 1:rust 2:go 3:ada ")
+    testing.AssertEqStr(tmpl.Render("{{ each t in tags }}{{ if loop.first }}F{{ end }}{{ end }}", root, ""), "F")
+    testing.AssertEqStr(tmpl.Render("{{ each t in tags }}{{ if loop.last }}L{{ end }}{{ end }}", root, ""), "L")
+    testing.AssertEqStr(tmpl.Render("{{ each t in tags }}{{ loop.length }}{{ end }}", root, ""), "4444")
+    testing.AssertEqStr(tmpl.Render("{{ each t in tags }}{{ loop.index1 }}{{ end }}", root, ""), "1234")
+    testing.AssertEqStr(tmpl.Render("{{ each t in empty }}x{{ end }}", root, ""), "")
+end
+
+func test_with(root: value.Value):
+    testing.AssertEqStr(tmpl.Render("{{ with author as a }}{{ a.name }}{{ end }}", root, ""), "Ali")
+    testing.AssertEqStr(tmpl.Render("{{ with author }}{{ with.role }}{{ end }}", root, ""), "dev")
+    testing.AssertEqStr(tmpl.Render("{{ with empty as e }}{{ e }}{{ else }}nope{{ end }}", root, ""), "nope")
+end
+
+func test_set(root: value.Value):
+    testing.AssertEqStr(tmpl.Render("{{ set x = author.name | upper }}{{ x }}", root, ""), "ALI")
+    testing.AssertEqStr(tmpl.Render("{{ set x = \"hi\" }}{{ x }}", root, ""), "hi")
+    testing.AssertEqStr(tmpl.Render("{{ if true }}{{ set y = \"in\" }}{{ y }}{{ end }}[{{ y }}]", root, ""), "in[]")
+end
+
+func test_filters_string(root: value.Value):
+    testing.AssertEqStr(tmpl.Render("{{ author.name | upper }}", root, ""), "ALI")
+    testing.AssertEqStr(tmpl.Render("{{ author.name | lower }}", root, ""), "ali")
+    testing.AssertEqStr(tmpl.Render("{{ \"hello world\" | title }}", root, ""), "Hello World")
+    testing.AssertEqStr(tmpl.Render("{{ \"HELLO\" | capitalize }}", root, ""), "Hello")
+    testing.AssertEqStr(tmpl.Render("{{ \"  hi  \" | trim }}", root, ""), "hi")
+    testing.AssertEqStr(tmpl.Render("{{ \"abc\" | reverse }}", root, ""), "cba")
+    testing.AssertEqStr(tmpl.Render("{{ title | safe }}", root, ""), "Hello <World>")
+    testing.AssertEqStr(tmpl.Render("{{ title | lower | trim }}", root, ""), "hello &lt;world&gt;")
+end
+
+func test_filters_truncate(root: value.Value):
+    testing.AssertEqStr(tmpl.Render("{{ \"hello world\" | truncate 5 }}", root, ""), "hello...")
+    testing.AssertEqStr(tmpl.Render("{{ \"hi\" | truncate 10 }}", root, ""), "hi")
+    testing.AssertEqStr(tmpl.Render("{{ \"one two three\" | truncatewords 2 }}", root, ""), "one two...")
+    testing.AssertEqStr(tmpl.Render("{{ \"one two\" | truncatewords 5 }}", root, ""), "one two")
+end
+
+func test_filters_replace_default(root: value.Value):
+    testing.AssertEqStr(tmpl.Render("{{ \"a-b-c\" | replace \"-\" \"_\" }}", root, ""), "a_b_c")
+    testing.AssertEqStr(tmpl.Render("{{ empty | default \"N/A\" }}", root, ""), "N/A")
+    testing.AssertEqStr(tmpl.Render("{{ title | default \"N/A\" }}", root, ""), "Hello &lt;World&gt;")
+end
+
+func test_filters_collections(root: value.Value):
+    testing.AssertEqStr(tmpl.Render("{{ tags | length }}", root, ""), "4")
+    testing.AssertEqStr(tmpl.Render("{{ title | length }}", root, ""), "13")
+    testing.AssertEqStr(tmpl.Render("{{ tags | first }}", root, ""), "go")
+    testing.AssertEqStr(tmpl.Render("{{ tags | last }}", root, ""), "ada")
+    testing.AssertEqStr(tmpl.Render("{{ tags | nth 2 }}", root, ""), "go")
+    testing.AssertEqStr(tmpl.Render("{{ tags | join \",\" }}", root, ""), "go,rust,go,ada")
+    testing.AssertEqStr(tmpl.Render("{{ \"a,b,c\" | split \",\" | join \"-\" }}", root, ""), "a-b-c")
+    testing.AssertEqStr(tmpl.Render("{{ tags | reverse | join \",\" }}", root, ""), "ada,go,rust,go")
+    testing.AssertEqStr(tmpl.Render("{{ nums | sort | join \",\" }}", root, ""), "1,3,9")
+    testing.AssertEqStr(tmpl.Render("{{ tags | unique | join \",\" }}", root, ""), "go,rust,ada")
+    testing.AssertEqStr(tmpl.Render("{{ author | keys | sort | join \",\" }}", root, ""), "name,role")
+    testing.AssertEqStr(tmpl.Render("{{ nums | min }}", root, ""), "1")
+    testing.AssertEqStr(tmpl.Render("{{ nums | max }}", root, ""), "9")
+end
+
+func test_filters_numeric(root: value.Value):
+    testing.AssertEqStr(tmpl.Render("{{ count | add 3 }}", root, ""), "8")
+    testing.AssertEqStr(tmpl.Render("{{ count | sub 2 }}", root, ""), "3")
+    testing.AssertEqStr(tmpl.Render("{{ count | mul 2 }}", root, ""), "10")
+    testing.AssertEqStr(tmpl.Render("{{ count | div 2 }}", root, ""), "2")
+    testing.AssertEqStr(tmpl.Render("{{ -3 | abs }}", root, ""), "3")
+    testing.AssertEqStr(tmpl.Render("{{ 3 | pluralize \"item\" \"items\" }}", root, ""), "items")
+    testing.AssertEqStr(tmpl.Render("{{ 1 | pluralize \"item\" \"items\" }}", root, ""), "item")
+end
+
+func test_filters_web(root: value.Value):
+    testing.AssertEqStr(tmpl.Render("{{ title | slugify }}", root, ""), "hello-world")
+    testing.AssertEqStr(tmpl.Render("{{ \"<b>hi</b>\" | striptags }}", root, ""), "hi")
+    testing.AssertEqStr(tmpl.Render("{{ \"a b\" | urlencode }}", root, ""), "a%20b")
+    json_out := tmpl.Render("{{ & author | json }}", root, "")
+    testing.AssertContains(json_out, "\"name\"")
+    testing.AssertContains(json_out, "\"Ali\"")
+end
+
+func test_include(root: value.Value):
+    dir := os.TempDir() + "/neyx-tmpl-test-include"
+    os.MkdirAll(dir)
+    io.WriteFile(dir + "/partial.html", "[partial:{{ author.name }}]")
+    got := tmpl.Render("before {{ include \"partial.html\" }} after", root, dir)
+    testing.AssertEqStr(got, "before [partial:Ali] after")
+    testing.AssertEqStr(tmpl.Render("{{ include \"missing.html\" }}x", root, dir), "x")
+    os.Remove(dir + "/partial.html")
+end
+
+pub func Run():
+    root := obj()
+    test_output(root)
+    test_literals(root)
+    test_index_access(root)
+    test_if(root)
+    test_each(root)
+    test_with(root)
+    test_set(root)
+    test_filters_string(root)
+    test_filters_truncate(root)
+    test_filters_replace_default(root)
+    test_filters_collections(root)
+    test_filters_numeric(root)
+    test_filters_web(root)
+    test_include(root)
+end

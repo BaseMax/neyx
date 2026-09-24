@@ -1,4 +1,5 @@
 /neyx
+/run_tests
 /dist
 *.o
 *.ll

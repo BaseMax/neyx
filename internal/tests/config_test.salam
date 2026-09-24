@@ -1,0 +1,57 @@
+package configtest
+
+import os
+import io
+import testing
+import config "../config/config.salam"
+
+func test_defaults_without_file():
+    path := os.TempDir() + "/neyx-config-test-missing.yml"
+    os.Remove(path)
+    site := config.Load(path)
+    testing.AssertEqStr(site.title, "My Site")
+    testing.AssertEqStr(site.language, "en")
+    testing.AssertEqStr(site.output, "dist")
+    testing.AssertEqInt(site.pagination_size, 10)
+    testing.AssertEqInt(site.taxonomies.len(), 1)
+    testing.AssertEqStr(site.taxonomies.get(0), "tags")
+end
+
+func test_custom_values():
+    path := os.TempDir() + "/neyx-config-test-custom.yml"
+    io.WriteFile(path, "title: \"My Blog\"\ndescription: \"A blog\"\nlanguage: \"fa\"\noutput: \"public\"\npagination_size: 5\n")
+    site := config.Load(path)
+    testing.AssertEqStr(site.title, "My Blog")
+    testing.AssertEqStr(site.description, "A blog")
+    testing.AssertEqStr(site.language, "fa")
+    testing.AssertEqStr(site.output, "public")
+    testing.AssertEqInt(site.pagination_size, 5)
+    os.Remove(path)
+end
+
+func test_taxonomies_and_languages():
+    path := os.TempDir() + "/neyx-config-test-lists.yml"
+    io.WriteFile(path, "taxonomies:\n  - categories\n  - series\nlanguages:\n  - en\n  - fa\n")
+    site := config.Load(path)
+    testing.AssertEqInt(site.taxonomies.len(), 2)
+    testing.AssertEqStr(site.taxonomies.get(0), "categories")
+    testing.AssertEqStr(site.taxonomies.get(1), "series")
+    testing.AssertEqInt(site.languages.len(), 2)
+    os.Remove(path)
+end
+
+func test_hooks():
+    path := os.TempDir() + "/neyx-config-test-hooks.yml"
+    io.WriteFile(path, "hooks:\n  before_build: \"echo before\"\n  after_build: \"echo after\"\n")
+    site := config.Load(path)
+    testing.AssertEqStr(site.hook_before_build, "echo before")
+    testing.AssertEqStr(site.hook_after_build, "echo after")
+    os.Remove(path)
+end
+
+pub func Run():
+    test_defaults_without_file()
+    test_custom_values()
+    test_taxonomies_and_languages()
+    test_hooks()
+end

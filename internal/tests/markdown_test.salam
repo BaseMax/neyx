@@ -1,0 +1,64 @@
+package markdowntest
+
+import testing
+import markdown "../markdown/markdown.salam"
+import blk "../markdown/blocks.salam"
+import inl "../markdown/inline.salam"
+import esc "../markdown/escape.salam"
+
+func test_headings_and_toc():
+    mut toc := ""
+    mut html := ""
+    markdown.ToHtml("## Section One\n\nBody text.\n\n## Section Two\n\nMore.\n", toc, html)
+    testing.AssertContains(html, "<h2 id=\"section-one\">Section One</h2>")
+    testing.AssertContains(html, "<h2 id=\"section-two\">Section Two</h2>")
+    testing.AssertContains(html, "<p>Body text.</p>")
+    testing.AssertContains(toc, "<a href=\"#section-one\">Section One</a>")
+    testing.AssertContains(toc, "<a href=\"#section-two\">Section Two</a>")
+end
+
+func test_lists_and_inline():
+    mut toc := ""
+    mut html := ""
+    markdown.ToHtml("Some **bold** text.\n\n- one\n- two\n", toc, html)
+    testing.AssertContains(html, "<strong>bold</strong>")
+    testing.AssertContains(html, "<li>one</li>")
+    testing.AssertContains(html, "<li>two</li>")
+end
+
+func test_code_block():
+    mut toc := ""
+    mut html := ""
+    markdown.ToHtml("```\nlet x = 1\n```\n", toc, html)
+    testing.AssertContains(html, "<pre")
+    testing.AssertContains(html, "let x = 1")
+end
+
+func test_slugify():
+    testing.AssertEqStr(blk.Slugify("Hello, World! 123"), "hello-world-123")
+    testing.AssertEqStr(blk.Slugify("  spaced  out  "), "spaced-out")
+    testing.AssertEqStr(blk.Slugify("Already-Slugged"), "already-slugged")
+    testing.AssertEqStr(blk.Slugify(""), "")
+end
+
+func test_inline_html():
+    testing.AssertEqStr(inl.InlineHtml("a **b** c"), "a <strong>b</strong> c")
+    testing.AssertEqStr(inl.InlineHtml("run `code` here"), "run <code>code</code> here")
+    testing.AssertContains(inl.InlineHtml("[link](https://example.com)"), "<a href=\"https://example.com\"")
+    testing.AssertContains(inl.InlineHtml("[link](https://example.com)"), ">link</a>")
+end
+
+func test_escape_html():
+    testing.AssertEqStr(esc.EscapeHtml("<script>"), "&lt;script&gt;")
+    testing.AssertEqStr(esc.EscapeHtml("a & b"), "a &amp; b")
+    testing.AssertEqStr(esc.EscapeHtml("plain"), "plain")
+end
+
+pub func Run():
+    test_headings_and_toc()
+    test_lists_and_inline()
+    test_code_block()
+    test_slugify()
+    test_inline_html()
+    test_escape_html()
+end
