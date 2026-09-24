@@ -8,4 +8,4 @@ layout: post
 
 # چرا سه زبان
 
-Neyx به‌طور خودکار تشخیص می‌دهد که `content/en/posts/second-post.md`، `content/fa/posts/second-post.md` و `content/ar/posts/second-post.md` همان صفحه به سه زبان هستند، چون در پوشه‌ی هر زبان مسیر یکسانی دارند. سپس هر صفحه برچسب‌های `hreflang` به نسخه‌های دیگر خود می‌گیرد و یک تعویض‌گر زبان در قالب می‌تواند آن‌ها را با `{{ each t in translations }}` فهرست کند.
+NeyX به‌طور خودکار تشخیص می‌دهد که `content/en/posts/second-post.md`، `content/fa/posts/second-post.md` و `content/ar/posts/second-post.md` همان صفحه به سه زبان هستند، چون در پوشه‌ی هر زبان مسیر یکسانی دارند. سپس هر صفحه برچسب‌های `hreflang` به نسخه‌های دیگر خود می‌گیرد و یک تعویض‌گر زبان در قالب می‌تواند آن‌ها را با `{{ each t in translations }}` فهرست کند.

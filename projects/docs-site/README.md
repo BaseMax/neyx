@@ -11,7 +11,7 @@ A small documentation site for a fictional product.
   `/guides/deployment/`)
 - Per-page table of contents (`{{ & toc }}`) built from `##` headings
 - Client-side search: `neyx-search.js` plus
-  `NeyxSearch('#search-input', '#search-results')` in the layout,
+  `NeyXSearch('#search-input', '#search-results')` in the layout,
   reading the auto-generated `search-index.json`
 - A raw HTML block (a `<div class="callout">` in
   `content/configuration.md`) mixed with Markdown

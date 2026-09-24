@@ -12,7 +12,7 @@ A blog in three languages: English, Persian, and Arabic.
 - hreflang linking: `content/en/posts/second-post.md`,
   `content/fa/posts/second-post.md`, and
   `content/ar/posts/second-post.md` share the same path under each
-  language directory, so Neyx treats them as translations of each
+  language directory, so NeyX treats them as translations of each
   other automatically, no extra front matter needed. Each page gets
   `<link rel="alternate" hreflang="...">` tags and a language switcher
   (`{{ each t in translations }}`) that jumps to the same post in

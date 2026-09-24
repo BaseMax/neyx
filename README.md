@@ -1,6 +1,6 @@
-# Neyx
+# NeyX
 
-Neyx is a lightweight, ultra-fast, feature-rich static site generator.
+NeyX is a lightweight, ultra-fast, feature-rich static site generator.
 
 Static sites. Native speed. Written in Salam.
 
@@ -30,7 +30,7 @@ Each script downloads the right binary for your platform from the
 [releases page](https://github.com/BaseMax/neyx/releases/latest) or the
 download buttons on [basemax.github.io/neyx](https://basemax.github.io/neyx/).
 
-Want to build Neyx yourself instead? See [BUILD-SOURCE.md](BUILD-SOURCE.md).
+Want to build NeyX yourself instead? See [BUILD-SOURCE.md](BUILD-SOURCE.md).
 
 ## Usage
 
@@ -94,7 +94,7 @@ in any directory becomes that directory's own route.
 
 ```yaml
 title: "My Site"
-description: "A new Neyx site"
+description: "A new NeyX site"
 url: "https://example.com"
 language: "en"
 output: "dist"
@@ -121,7 +121,7 @@ Set `theme` to a name and add `themes/<name>/layouts/` and
 `themes/<name>/assets/`. A layout or asset in the project's own `layouts/`
 or `assets/` always wins, so a site only needs to override the files it
 wants to change - everything else falls through to the theme, then to
-Neyx's built-in default layout.
+NeyX's built-in default layout.
 
 ### Hooks
 
@@ -162,15 +162,15 @@ and `layouts/<field>.html` (e.g. `layouts/tags-term.html`).
 
 ```markdown
 ---
-title: "Hello Neyx"
-description: "My first Neyx article"
+title: "Hello NeyX"
+description: "My first NeyX article"
 date: "2026-09-24"
 tags: ["salam", "neyx"]
 layout: post
 draft: false
 ---
 
-# Hello Neyx
+# Hello NeyX
 
 Welcome to my site.
 ```
@@ -224,7 +224,7 @@ the built-in layout).
 <script src="/assets/neyx-search.js"></script>
 <input id="q" placeholder="Search…">
 <ul id="results"></ul>
-<script>NeyxSearch('#q', '#results')</script>
+<script>NeyXSearch('#q', '#results')</script>
 ```
 
 It fetches `/search-index.json` once and filters by title/description as

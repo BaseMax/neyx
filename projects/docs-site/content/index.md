@@ -5,7 +5,7 @@ description: "What this documentation covers."
 
 # Introduction
 
-This is a small documentation site built with Neyx, showing a sidebar, a table of contents, and client-side search working together.
+This is a small documentation site built with NeyX, showing a sidebar, a table of contents, and client-side search working together.
 
 ## What's here
 

@@ -8,4 +8,4 @@ layout: post
 
 # لماذا ثلاث لغات
 
-يكتشف Neyx أن `content/en/posts/second-post.md` و`content/fa/posts/second-post.md` و`content/ar/posts/second-post.md` هي نفس الصفحة بثلاث لغات، لأنها تشترك في نفس المسار داخل كل مجلد لغة. تحصل كل صفحة بعدها على وسوم `hreflang` تشير إلى أشقائها، ويمكن لمبدّل اللغة في القالب سرد هذه الأشقاء باستخدام `{{ each t in translations }}`.
+يكتشف NeyX أن `content/en/posts/second-post.md` و`content/fa/posts/second-post.md` و`content/ar/posts/second-post.md` هي نفس الصفحة بثلاث لغات، لأنها تشترك في نفس المسار داخل كل مجلد لغة. تحصل كل صفحة بعدها على وسوم `hreflang` تشير إلى أشقائها، ويمكن لمبدّل اللغة في القالب سرد هذه الأشقاء باستخدام `{{ each t in translations }}`.

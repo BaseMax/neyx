@@ -1,4 +1,4 @@
-# Building Neyx from source
+# Building NeyX from source
 
 Most people should just install a prebuilt binary, see the "Install" section
 in [README.md](README.md). Build from source instead if you want to
@@ -7,7 +7,7 @@ unreleased code.
 
 ## 1. Install the Salam compiler
 
-Neyx is written in [Salam](https://github.com/SalamLang/Salam) and needs the
+NeyX is written in [Salam](https://github.com/SalamLang/Salam) and needs the
 `salam` compiler on your `PATH` to build.
 
 macOS / Linux:
@@ -28,7 +28,7 @@ Check it worked:
 salam version
 ```
 
-Neyx's CI builds against Salam `0.4.4`; if something doesn't compile, try
+NeyX's CI builds against Salam `0.4.4`; if something doesn't compile, try
 pinning that version:
 
 ```bash

@@ -14,7 +14,7 @@ pub func Run(_args: Vector<str>):
     n := pages.len()
     pages.free()
 
-    println "Neyx benchmark"
+    println "NeyX benchmark"
     println ""
     println "Pages:", n
     println ""

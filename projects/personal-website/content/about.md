@@ -9,7 +9,7 @@ I've spent the last eight years moving between design and engineering roles, usu
 
 ## Now
 
-Freelancing part-time, building sites for friends with [Neyx](https://github.com/BaseMax/neyx), and slowly learning to bind books.
+Freelancing part-time, building sites for friends with [NeyX](https://github.com/BaseMax/neyx), and slowly learning to bind books.
 
 ## Elsewhere
 
