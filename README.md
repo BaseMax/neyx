@@ -30,13 +30,19 @@ neyx preview
 | Command | Description |
 | --- | --- |
 | `neyx new <name>` | Scaffold a new project |
-| `neyx build [--drafts]` | Build the site into the output directory |
-| `neyx dev [--port] [--drafts]` | Build and serve the site, rebuild-on-request |
+| `neyx new post <title>` | Create a new dated post under `content/posts/` |
+| `neyx build [--drafts] [--pretty]` | Build the site into the output directory |
+| `neyx dev [--port] [--drafts]` | Build and serve the site |
 | `neyx preview [--port]` | Serve an existing production build |
 | `neyx clean` | Remove the output directory |
-| `neyx check` | Check the build for broken links, missing assets, and duplicate routes |
+| `neyx check` | Check the build for broken links, missing assets, missing alt text, and duplicate routes |
+| `neyx routes` | List every computed route |
 | `neyx info` | Show project information |
+| `neyx doctor` | Diagnose common project problems |
 | `neyx version` / `neyx help` | Version and usage |
+
+`neyx build` minifies HTML/XML output by default; pass `--pretty` for
+readable output. `neyx dev` always builds with `--pretty`.
 
 ## Project layout
 
@@ -67,9 +73,21 @@ layouts: "layouts"
 assets: "assets"
 data: "data"
 static: "static"
+pagination_size: 10
+languages: ["en", "fa"]
 ```
 
 Every key is also available in templates under `{{ site.* }}`.
+
+### Multi-language sites
+
+Set `languages` to a list of codes and split `content/` into one directory
+per language (`content/en/...`, `content/fa/...`). Routes get the language
+prefix (`content/fa/about.md` → `/fa/about/`), and every template gets
+`{{ lang }}` (the page's language) and `{{ dir }}` (`rtl` for `fa`/`ar`/`he`/`ur`,
+`ltr` otherwise) — the built-in layout already uses them:
+`<html lang="{{ lang }}" dir="{{ dir }}">`. Without `languages` configured,
+sites build exactly as before (single language, no prefix).
 
 ## Front matter
 
@@ -90,7 +108,10 @@ Welcome to my site.
 
 `layout` picks the file in `layouts/` used to render the page (defaults to
 `default.html`). `draft: true` pages are skipped by `neyx build` unless
-`--drafts` is passed.
+`--drafts` is passed. `paginate: true` splits a listing page's `posts` across
+`/`, `/page/2/`, `/page/3/`... (size from `pagination_size`), with
+`{{ pagination.page }}`, `.total_pages`, `.has_next`/`.has_prev`, and
+`.next_url`/`.prev_url` available in the template.
 
 ## Templates
 
@@ -118,9 +139,10 @@ with a `date`, newest first).
 
 ## Generated output
 
-Every build also writes `sitemap.xml`, `feed.xml` (RSS), and `robots.txt`
-into the output directory, plus `/tags/<tag>/` and `/tags/` pages for any
-`tags` used in front matter.
+Every build also writes `sitemap.xml`, `feed.xml` (RSS), `robots.txt`,
+`api/pages.json`, `api/posts.json`, and `search-index.json` into the output
+directory, plus `/tags/<tag>/` and `/tags/` pages for any `tags` used in
+front matter.
 
 ## License
 
