@@ -12,7 +12,7 @@ pub func Split(path: str, text: str, front_out &: value.Value, body_out &: str):
     n := lines.len()
 
     if n == 0 || str.Trim(lines.get(0)) != "---":
-        front_out = value.Value {}
+        front_out = value.NewValueObject()
         body_out = text
         ret
     end
@@ -28,7 +28,7 @@ pub func Split(path: str, text: str, front_out &: value.Value, body_out &: str):
     end
 
     if end_idx < 0:
-        front_out = value.Value {}
+        front_out = value.NewValueObject()
         body_out = text
         ret
     end
@@ -45,10 +45,10 @@ pub func Split(path: str, text: str, front_out &: value.Value, body_out &: str):
     fm := yaml.Decode(fm_text, err)
     if err.kind != encerr.KindNone:
         printerrln "neyx: warning: could not parse front matter in", path, "-", err.message
-        front_out = value.Value {}
+        front_out = value.NewValueObject()
     else:
         if !value.IsObject(fm):
-            front_out = value.Value {}
+            front_out = value.NewValueObject()
         else:
             front_out = fm
         end
