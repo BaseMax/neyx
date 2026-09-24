@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-This file gives an AI assistant everything needed to (a) help someone build a real site with NeyX, and (b) work on the NeyX tool's own source in this repository.
+This file gives an AI assistant everything needed to build a real website, blog, documentation site, or multi-language site with NeyX, using only the installed `neyx` command. No access to NeyX's own source code is required to use anything described here; it's all built into the `neyx` binary.
 
 ## What NeyX is
 
@@ -147,16 +147,6 @@ Invalid inputs degrade gracefully: string filters on a number stringify it first
 
 ---
 
-## Working in this repository
+## Where to look for more
 
-The above is about *using* NeyX. The rest is about *this* repo, which is NeyX's own source (written in Salam, a compiled language: `salam build neyx.salam --output=neyx`, or `salam run <file>.salam` to interpret one file directly).
-
-- **No comments** in `.salam`, `.yml`/`.yaml`, `.css`, or `.js` files anywhere in this repo. Put reasoning in commit messages instead.
-- **Salam ordering rule**: in a file, `import`s come first, then every private (non-`pub`) function must be defined before any `pub` function that isn't itself declaring types/consts at the top. Private helpers generally need to appear before their first use, top to bottom, in a file.
-- **No closures** in Salam; pass named functions, not inline lambdas capturing outer state.
-- **`str.Len`/`.len()` on a `str` compiles to `strlen`**, so embedded `0x00` bytes truncate. Never round-trip binary data through a plain `str` from an unknown-length source; use `Base64DecodeBytes` into a raw buffer instead of `Base64DecodeStrict` for anything binary.
-- **No built-in file-mtime/process-management APIs** beyond what `std/os` exposes; shell out via `os.Run`/`os.RunCapture` for anything else, and expect Windows vs. POSIX differences (see `internal/dev/dev.salam` for the platform-conditional `SALAM_OS_WINDOWS`/`SALAM_OS_UNIX` pattern already used for the dev-server watcher).
-- **Tests**: `internal/tests/*.salam`, run all of them with `salam run internal/tests/run_tests.salam` from the repo root (exits non-zero on any failure, using Salam's own `std/testing` package). Add new test files there and wire them into `run_tests.salam`'s imports. It lives inside `internal/tests/` rather than the repo root because a second `package main` file at the root makes `salam build`'s auto-discovery ambiguous. CI runs this on all three platforms right after building, before the slower smoke tests.
-- **CI**: `.github/workflows/build-release.yml`. A push to `main` whose commit message starts with `release:` builds all platforms and publishes a public GitHub Release; anything else just builds and tests. Validate workflow edits with `actionlint` before pushing.
-- **Commits**: short, human-sounding messages, no AI co-author line, no em-dashes anywhere in written content (commit messages, docs, chat) as it's a known AI-writing tell this project explicitly avoids.
-- **Example projects** under `projects/` are real, working NeyX sites used as both documentation and CI-adjacent regression coverage; keep them buildable (`neyx build` in each) after any template-engine or builder change.
+Everything above is enough to build a complete NeyX site. If something unusual comes up that isn't covered here, the source is public at https://github.com/BaseMax/neyx, and `projects/` in that repo has five complete, real example sites (personal site, blog, multi-language blog, docs site, themed landing page) worth reading for reference, though none of that is required for normal use.
