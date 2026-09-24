@@ -13,8 +13,7 @@ import infocmd "../info/info.salam"
 import doctorcmd "../doctor/doctor.salam"
 import routescmd "../routes/routes.salam"
 import benchmarkcmd "../benchmark/benchmark.salam"
-
-const VERSION := "0.1.0"
+import version "../version/version.salam"
 
 func slice_args(argv: Vector<str>): Vector<str>:
     if argv.len() <= 1: ret Vector {} end
@@ -22,7 +21,7 @@ func slice_args(argv: Vector<str>): Vector<str>:
 end
 
 func new_app(): cli.App:
-    mut app := cli.New("neyx", "A lightweight, ultra-fast static site generator built with Salam.", VERSION)
+    mut app := cli.New("neyx", "A lightweight, ultra-fast static site generator built with Salam.", version.VERSION)
     cli.Register(app, "new", "Create a new NeyX project")
     cli.Register(app, "init", "Initialize a NeyX project in the current directory")
     cli.Register(app, "dev", "Start the development server")
@@ -49,7 +48,7 @@ pub func Run(process_argv: Vector<str>):
     end
 
     if cmd == cli.CmdVersion:
-        println "neyx", VERSION
+        println "neyx", version.VERSION
         ret
     end
 

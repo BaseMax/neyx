@@ -28,7 +28,7 @@ jobs:
       - name: Read version
         id: ver
         run: |
-          version=$(grep -oE 'VERSION := "[^"]+"' internal/cli/app.salam | cut -d'"' -f2)
+          version=$(grep -oE 'VERSION := "[^"]+"' internal/version/version.salam | cut -d'"' -f2)
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
   build:
@@ -183,6 +183,15 @@ jobs:
           else
             echo "::warning::no 7z binary on this runner, skipping .7z archive"
           fi
+          cd ..
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            direct_bin="${ARCHIVE_BASE}.exe"
+          else
+            direct_bin="${ARCHIVE_BASE}"
+          fi
+          cp "dist-pkg/${{ matrix.binary }}" "$direct_bin"
+          gzip -c "dist-pkg/${{ matrix.binary }}" > "${ARCHIVE_BASE}.gz"
+          echo "DIRECT_BIN=$direct_bin" >> "$GITHUB_ENV"
 
       - name: Upload release artifacts
         if: github.event_name == 'push' && github.ref == 'refs/heads/main' && startsWith(github.event.head_commit.message, 'release:')
@@ -193,6 +202,8 @@ jobs:
             ${{ env.ARCHIVE_BASE }}.zip
             ${{ env.ARCHIVE_BASE }}.tar.gz
             ${{ env.ARCHIVE_BASE }}.7z
+            ${{ env.ARCHIVE_BASE }}.gz
+            ${{ env.DIRECT_BIN }}
           if-no-files-found: warn
 
   release:

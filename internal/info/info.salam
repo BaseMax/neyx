@@ -4,8 +4,7 @@ import conv
 import config "../config/config.salam"
 import content "../content/loader.salam"
 import p "../content/page.salam"
-
-const VERSION := "0.1.0"
+import version "../version/version.salam"
 
 func count_drafts(pages: Vector<p.Page>): int:
     mut n := 0
@@ -22,7 +21,7 @@ pub func Run(_args: Vector<str>):
     drafts := count_drafts(pages)
 
     println "Project:  ", site.title
-    println "NeyX:     ", VERSION
+    println "NeyX:     ", version.VERSION
     println "Content:  ", pages.len(), "page(s) in", site.content_dir, "(" + conv.FormatInt(drafts as i64) + " draft(s))"
     println "Output:   ", site.output
     println "Layouts:  ", site.layouts_dir
