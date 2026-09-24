@@ -1,0 +1,83 @@
+package app
+
+import os
+import collections
+import cli
+import newcmd "../scaffold/new.salam"
+import buildcmd "../build/builder.salam"
+import devcmd "../dev/dev.salam"
+import previewcmd "../preview/preview.salam"
+
+const VERSION := "0.1.0"
+
+func slice_args(argv: Vector<str>): Vector<str>:
+    if argv.len() <= 1: ret Vector {} end
+    ret collections.slice(argv, 1, argv.len() - 1)
+end
+
+func new_app(): cli.App:
+    mut app := cli.New("neyx", "A lightweight, ultra-fast static site generator built with Salam.", VERSION)
+    cli.Register(app, "new", "Create a new Neyx project")
+    cli.Register(app, "dev", "Start the development server")
+    cli.Register(app, "build", "Build the site for production")
+    cli.Register(app, "preview", "Preview the production build")
+    cli.Register(app, "clean", "Remove the output directory")
+    ret app
+end
+
+func run_clean(_args: Vector<str>):
+    out := "dist"
+    if os.IsDir(out):
+        os.RemoveAll(out)
+        println "removed", out
+    else:
+        println "nothing to clean"
+    end
+end
+
+pub func Run(process_argv: Vector<str>):
+    app := new_app()
+    argv := slice_args(process_argv)
+    cmd := cli.Dispatch(app, argv)
+    rest := cli.RemainingArgs(argv)
+
+    if cmd == cli.CmdHelp:
+        println cli.Usage(app)
+        ret
+    end
+
+    if cmd == cli.CmdVersion:
+        println "neyx", VERSION
+        ret
+    end
+
+    if cmd == "new":
+        newcmd.Run(rest)
+        ret
+    end
+
+    if cmd == "build":
+        buildcmd.Run(rest)
+        ret
+    end
+
+    if cmd == "dev":
+        devcmd.Run(rest)
+        ret
+    end
+
+    if cmd == "preview":
+        previewcmd.Run(rest)
+        ret
+    end
+
+    if cmd == "clean":
+        run_clean(rest)
+        ret
+    end
+
+    printerrln "neyx: unknown command", "'" + argv.get(0) + "'"
+    printerrln ""
+    println cli.Usage(app)
+    os.Exit(1)
+end

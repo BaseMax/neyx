@@ -1,0 +1,5 @@
+package build
+
+pub func Run(_args: Vector<str>):
+    println "neyx build: not implemented yet"
+end

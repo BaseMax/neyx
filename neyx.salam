@@ -1,0 +1,8 @@
+package main
+
+import os
+import cli "internal/cli/app.salam"
+
+func main:
+    cli.Run(os.Args())
+end

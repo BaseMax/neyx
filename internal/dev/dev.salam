@@ -1,0 +1,5 @@
+package dev
+
+pub func Run(_args: Vector<str>):
+    println "neyx dev: not implemented yet"
+end

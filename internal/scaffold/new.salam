@@ -1,0 +1,5 @@
+package scaffold
+
+pub func Run(_args: Vector<str>):
+    println "neyx new: not implemented yet"
+end
