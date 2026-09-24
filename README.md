@@ -1,8 +1,18 @@
+<div align="center">
+
+<img src="docs/assets/og-image.png" alt="NeyX - Static sites. Native speed. Written in Salam." width="720">
+
 # NeyX
 
-NeyX is a lightweight, ultra-fast, feature-rich static site generator.
+**Lightweight. Ultra-fast. Feature-rich static site generator.**
 
-Static sites. Native speed. Written in Salam.
+[![License: GPL v3](https://img.shields.io/badge/license-GPLv3-blue.svg)](LICENSE)
+[![Latest release](https://img.shields.io/github/v/release/BaseMax/neyx?color=14b8a6)](https://github.com/BaseMax/neyx/releases/latest)
+[![Website](https://img.shields.io/badge/docs-basemax.github.io%2Fneyx-14b8a6)](https://basemax.github.io/neyx/)
+
+[Install](#install) · [Usage](#usage) · [Commands](#commands) · [Docs](https://basemax.github.io/neyx/)
+
+</div>
 
 ## Install
 
