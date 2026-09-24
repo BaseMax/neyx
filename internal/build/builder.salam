@@ -297,7 +297,7 @@ pub func Run(args: Vector<str>):
         if !quiet && image_count > 0: println "  generated", image_count, "optimized image(s)" end
     end
 
-    taxonomy.Build(site, pages, do_minify)
+    taxonomy.Build(site, pages, do_minify, quiet)
 
     mut sitemap_xml := sitemap.Build(site, pages)
     if do_minify: sitemap_xml = minify.Xml(sitemap_xml) end

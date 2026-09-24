@@ -67,7 +67,7 @@ func page_summary(page: p.Page): value.Value:
     ret v
 end
 
-func write_tag_page(site: config.Site, tag: str, pages: Vector<p.Page>, do_minify: bool):
+func write_tag_page(site: config.Site, tag: str, pages: Vector<p.Page>, do_minify: bool, quiet: bool):
     slug := blk.Slugify(tag)
     mut items := value.NewValueArray()
     repeat pages.len() with i:
@@ -89,10 +89,10 @@ func write_tag_page(site: config.Site, tag: str, pages: Vector<p.Page>, do_minif
     dir := site.output + "/tags/" + slug + "/"
     os.MkdirAll(dir)
     io.WriteFile(dir + "index.html", html)
-    println "  wrote", dir + "index.html"
+    if !quiet: println "  wrote", dir + "index.html" end
 end
 
-func write_tags_index(site: config.Site, tags: Vector<str>, pages: Vector<p.Page>, do_minify: bool):
+func write_tags_index(site: config.Site, tags: Vector<str>, pages: Vector<p.Page>, do_minify: bool, quiet: bool):
     mut tags_arr := value.NewValueArray()
     repeat tags.len() with i:
         tag := tags.get(i)
@@ -120,16 +120,16 @@ func write_tags_index(site: config.Site, tags: Vector<str>, pages: Vector<p.Page
     dir := site.output + "/tags/"
     os.MkdirAll(dir)
     io.WriteFile(dir + "index.html", html)
-    println "  wrote", dir + "index.html"
+    if !quiet: println "  wrote", dir + "index.html" end
 end
 
-pub func Build(site: config.Site, pages: Vector<p.Page>, do_minify: bool):
+pub func Build(site: config.Site, pages: Vector<p.Page>, do_minify: bool, quiet: bool):
     tags := collect_tags(pages)
     defer tags.free()
     if tags.len() == 0: ret end
 
     repeat tags.len() with i:
-        write_tag_page(site, tags.get(i), pages, do_minify)
+        write_tag_page(site, tags.get(i), pages, do_minify, quiet)
     end
-    write_tags_index(site, tags, pages, do_minify)
+    write_tags_index(site, tags, pages, do_minify, quiet)
 end
