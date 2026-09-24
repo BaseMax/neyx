@@ -81,6 +81,7 @@ data: "data"
 static: "static"
 pagination_size: 10
 languages: ["en", "fa"]
+taxonomies: ["tags", "categories"]
 optimize_images: true
 theme: ""
 hooks:
@@ -112,7 +113,26 @@ prefix (`content/fa/about.md` → `/fa/about/`), and every template gets
 `{{ lang }}` (the page's language) and `{{ dir }}` (`rtl` for `fa`/`ar`/`he`/`ur`,
 `ltr` otherwise) — the built-in layout already uses them:
 `<html lang="{{ lang }}" dir="{{ dir }}">`. Without `languages` configured,
-sites build exactly as before (single language, no prefix).
+sites build exactly as before (single language, no prefix). `pages`/`posts`
+are scoped to each page's own language automatically.
+
+Pages at the same relative path in different language directories
+(`content/en/about.md` and `content/fa/about.md`) are treated as
+translations of each other: each gets `{{ each t in translations }}` (with
+`t.lang`/`t.url`) and the built-in layout emits
+`<link rel="alternate" hreflang="…">` for each one. Set `translation_key`
+in front matter to link pages whose filenames don't match.
+
+### Taxonomies
+
+`taxonomies` (default `["tags"]`) lists which front-matter array fields
+become browsable term collections — `tags: [...]` and `categories: [...]`
+both work the same way. Each configured field gets `/<field>/<term>/` pages
+(a `{{ each item in items }}` list) and a `/<field>/` index
+(`{{ each t in terms }}`, each with `.name`/`.url`/`.count`). Terms are
+matched case-insensitively, so `tags: [JavaScript]` and `tags: [javascript]`
+land on the same page. Override the layouts with `layouts/<field>-term.html`
+and `layouts/<field>.html` (e.g. `layouts/tags-term.html`).
 
 ## Front matter
 
@@ -160,17 +180,19 @@ Welcome to my site.
 Every page's front matter fields are available at the top level (`{{ title }}`),
 alongside `content` (the rendered body), `toc` (an `<li>` per `##` heading,
 for `{{ & toc }}` inside your own `<ul>`/`<nav>`), `url` (the page's route),
-`site.*` (config), `data.*` (data files), `pages` (every page), and `posts`
-(every page with a `date`, newest first).
+`lang`/`dir`, `translations` (see multi-language sites, below), `site.*`
+(config), `data.*` (data files), `pages` (every page in this language),
+and `posts` (every page in this language with a `date`, newest first).
 
 ## Generated output
 
-Every build also writes `sitemap.xml`, `feed.xml` (RSS), `robots.txt`,
-`api/pages.json`, `api/posts.json`, `search-index.json`, and a small
-dependency-free `assets/neyx-search.js` into the output directory, plus
-`/tags/<tag>/` and `/tags/` pages for any `tags` used in front matter.
-`sitemap.xml` skips any page with `noindex: true` in front matter (which
-also adds `<meta name="robots" content="noindex">` in the built-in layout).
+Every build also writes `sitemap.xml`, `feed.xml` (RSS 2.0), `atom.xml`
+(Atom 1.0), `robots.txt`, `api/pages.json`, `api/posts.json`,
+`search-index.json`, and a small dependency-free `assets/neyx-search.js`
+into the output directory, plus term/index pages for every configured
+taxonomy (see above). `sitemap.xml` skips any page with `noindex: true` in
+front matter (which also adds `<meta name="robots" content="noindex">` in
+the built-in layout).
 
 ### Client-side search
 
