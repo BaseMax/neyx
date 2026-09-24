@@ -19,6 +19,7 @@ pub struct Site:
     pub static_dir: str = "static"
     pub pagination_size: int = 10
     pub languages: Vector<str> = Vector {} as Vector<str>
+    pub taxonomies: Vector<str> = Vector {} as Vector<str>
     pub optimize_images: bool = true
     pub theme: str = ""
     pub hook_before_build: str = ""
@@ -95,6 +96,8 @@ pub func Load(path: str): Site:
     site.static_dir = str_field(root, "static", site.static_dir)
     site.pagination_size = int_field(root, "pagination_size", site.pagination_size)
     site.languages = str_array_field(root, "languages")
+    site.taxonomies = str_array_field(root, "taxonomies")
+    if site.taxonomies.len() == 0: site.taxonomies.push("tags") end
     site.optimize_images = bool_field(root, "optimize_images", site.optimize_images)
     site.theme = str_field(root, "theme", site.theme)
     site.hook_before_build = nested_str_field(root, "hooks", "before_build", "")

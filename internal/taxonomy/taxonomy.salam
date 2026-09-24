@@ -11,9 +11,9 @@ import blk "../markdown/blocks.salam"
 import tmpl "../tmpl/tmpl.salam"
 import minify "../minify/minify.salam"
 
-const DEFAULT_TAG_LAYOUT := "<!doctype html><html><head><title>{{ tag }} - {{ site.title }}</title></head><body><h1>Tag: {{ tag }}</h1><ul>{{ each item in items }}<li><a href=\"{{ item.url }}\">{{ item.title }}</a></li>{{ end }}</ul></body></html>"
+const DEFAULT_TERM_LAYOUT := "<!doctype html><html><head><title>{{ term }} - {{ site.title }}</title></head><body><h1>{{ taxonomy }}: {{ term }}</h1><ul>{{ each item in items }}<li><a href=\"{{ item.url }}\">{{ item.title }}</a></li>{{ end }}</ul></body></html>"
 
-const DEFAULT_TAGS_INDEX_LAYOUT := "<!doctype html><html><head><title>Tags - {{ site.title }}</title></head><body><h1>Tags</h1><ul>{{ each t in tags }}<li><a href=\"{{ t.url }}\">{{ t.name }}</a> ({{ t.count }})</li>{{ end }}</ul></body></html>"
+const DEFAULT_INDEX_LAYOUT := "<!doctype html><html><head><title>{{ taxonomy }} - {{ site.title }}</title></head><body><h1>{{ taxonomy }}</h1><ul>{{ each t in terms }}<li><a href=\"{{ t.url }}\">{{ t.name }}</a> ({{ t.count }})</li>{{ end }}</ul></body></html>"
 
 func layout_or(site: config.Site, name: str, fallback: str): str:
     path := site.layouts_dir + "/" + name + ".html"
@@ -27,38 +27,38 @@ func layout_or(site: config.Site, name: str, fallback: str): str:
     ret fallback
 end
 
-func has_tag(page: p.Page, tag: str): bool:
+func has_term(page: p.Page, field: str, term: str): bool:
     mut ok := false
-    tags_val := value.ObjectGetOk(page.front, "tags", ok)
-    if !ok || !value.IsArray(tags_val): ret false end
+    terms_val := value.ObjectGetOk(page.front, field, ok)
+    if !ok || !value.IsArray(terms_val): ret false end
     mut found := false
-    lower_tag := str.Lower(tag)
-    repeat value.ArrayLen(tags_val) with j:
-        item := value.ArrayGet(tags_val, j)
-        if value.IsString(item) && str.Lower(value.AsString(item)) == lower_tag:
+    lower_term := str.Lower(term)
+    repeat value.ArrayLen(terms_val) with j:
+        item := value.ArrayGet(terms_val, j)
+        if value.IsString(item) && str.Lower(value.AsString(item)) == lower_term:
             found = true
         end
     end
     ret found
 end
 
-func collect_tags(pages: Vector<p.Page>): Vector<str>:
+func collect_terms(pages: Vector<p.Page>, field: str): Vector<str>:
     mut out := Vector {} as Vector<str>
     mut seen_lower := Vector {} as Vector<str>
     defer seen_lower.free()
     repeat pages.len() with i:
         page := pages.get(i)
         mut ok := false
-        tags_val := value.ObjectGetOk(page.front, "tags", ok)
-        if ok && value.IsArray(tags_val):
-            repeat value.ArrayLen(tags_val) with j:
-                item := value.ArrayGet(tags_val, j)
+        terms_val := value.ObjectGetOk(page.front, field, ok)
+        if ok && value.IsArray(terms_val):
+            repeat value.ArrayLen(terms_val) with j:
+                item := value.ArrayGet(terms_val, j)
                 if value.IsString(item):
-                    tag := value.AsString(item)
-                    lower := str.Lower(tag)
+                    term := value.AsString(item)
+                    lower := str.Lower(term)
                     if !collections.contains(seen_lower, lower):
                         seen_lower.push(lower)
-                        out.push(tag)
+                        out.push(term)
                     end
                 end
             end
@@ -73,69 +73,79 @@ func page_summary(page: p.Page): value.Value:
     ret v
 end
 
-func write_tag_page(site: config.Site, tag: str, pages: Vector<p.Page>, do_minify: bool, quiet: bool):
-    slug := blk.Slugify(tag)
+func write_term_page(site: config.Site, field: str, term: str, pages: Vector<p.Page>, do_minify: bool, quiet: bool):
+    slug := blk.Slugify(term)
     mut items := value.NewValueArray()
     repeat pages.len() with i:
         page := pages.get(i)
-        if has_tag(page, tag):
+        if has_term(page, field, term):
             value.ArrayPush(items, page_summary(page))
         end
     end
 
     mut root := value.NewValueObject()
-    value.ObjectSet(root, "tag", value.ValueString(tag))
+    value.ObjectSet(root, "taxonomy", value.ValueString(field))
+    value.ObjectSet(root, "term", value.ValueString(term))
+    value.ObjectSet(root, "tag", value.ValueString(term))
     value.ObjectSet(root, "items", items)
     value.ObjectSet(root, "site", site.data)
 
-    tpl_text := layout_or(site, "tag", DEFAULT_TAG_LAYOUT)
+    tpl_text := layout_or(site, field + "-term", DEFAULT_TERM_LAYOUT)
     mut html := tmpl.Render(tpl_text, root)
     if do_minify: html = minify.Html(html) end
 
-    dir := site.output + "/tags/" + slug + "/"
+    dir := site.output + "/" + field + "/" + slug + "/"
     os.MkdirAll(dir)
     io.WriteFile(dir + "index.html", html)
     if !quiet: println "  wrote", dir + "index.html" end
 end
 
-func write_tags_index(site: config.Site, tags: Vector<str>, pages: Vector<p.Page>, do_minify: bool, quiet: bool):
-    mut tags_arr := value.NewValueArray()
-    repeat tags.len() with i:
-        tag := tags.get(i)
-        slug := blk.Slugify(tag)
+func write_index_page(site: config.Site, field: str, terms: Vector<str>, pages: Vector<p.Page>, do_minify: bool, quiet: bool):
+    mut terms_arr := value.NewValueArray()
+    repeat terms.len() with i:
+        term := terms.get(i)
+        slug := blk.Slugify(term)
         mut count := 0
         repeat pages.len() with j:
-            if has_tag(pages.get(j), tag): count += 1 end
+            if has_term(pages.get(j), field, term): count += 1 end
         end
         mut entry := value.NewValueObject()
-        value.ObjectSet(entry, "name", value.ValueString(tag))
+        value.ObjectSet(entry, "name", value.ValueString(term))
         value.ObjectSet(entry, "slug", value.ValueString(slug))
-        value.ObjectSet(entry, "url", value.ValueString("/tags/" + slug + "/"))
+        value.ObjectSet(entry, "url", value.ValueString("/" + field + "/" + slug + "/"))
         value.ObjectSet(entry, "count", value.ValueInt(count as i64))
-        value.ArrayPush(tags_arr, entry)
+        value.ArrayPush(terms_arr, entry)
     end
 
     mut root := value.NewValueObject()
-    value.ObjectSet(root, "tags", tags_arr)
+    value.ObjectSet(root, "taxonomy", value.ValueString(field))
+    value.ObjectSet(root, "terms", terms_arr)
+    value.ObjectSet(root, "tags", terms_arr)
     value.ObjectSet(root, "site", site.data)
 
-    tpl_text := layout_or(site, "tags", DEFAULT_TAGS_INDEX_LAYOUT)
+    tpl_text := layout_or(site, field, DEFAULT_INDEX_LAYOUT)
     mut html := tmpl.Render(tpl_text, root)
     if do_minify: html = minify.Html(html) end
 
-    dir := site.output + "/tags/"
+    dir := site.output + "/" + field + "/"
     os.MkdirAll(dir)
     io.WriteFile(dir + "index.html", html)
     if !quiet: println "  wrote", dir + "index.html" end
 end
 
-pub func Build(site: config.Site, pages: Vector<p.Page>, do_minify: bool, quiet: bool):
-    tags := collect_tags(pages)
-    defer tags.free()
-    if tags.len() == 0: ret end
+func build_one(site: config.Site, pages: Vector<p.Page>, field: str, do_minify: bool, quiet: bool):
+    terms := collect_terms(pages, field)
+    defer terms.free()
+    if terms.len() == 0: ret end
 
-    repeat tags.len() with i:
-        write_tag_page(site, tags.get(i), pages, do_minify, quiet)
+    repeat terms.len() with i:
+        write_term_page(site, field, terms.get(i), pages, do_minify, quiet)
     end
-    write_tags_index(site, tags, pages, do_minify, quiet)
+    write_index_page(site, field, terms, pages, do_minify, quiet)
+end
+
+pub func Build(site: config.Site, pages: Vector<p.Page>, do_minify: bool, quiet: bool):
+    repeat site.taxonomies.len() with i:
+        build_one(site, pages, site.taxonomies.get(i), do_minify, quiet)
+    end
 end
