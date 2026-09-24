@@ -1,0 +1,186 @@
+package markdown
+
+import str
+import esc "escape.salam"
+import inl "inline.salam"
+import blk "blocks.salam"
+
+pub func ToHtml(body: str, toc_out &: str, html_out &: str):
+    mut html := str.NewBuilder()
+    defer str.BufFree(html)
+    mut toc := str.NewBuilder()
+    defer str.BufFree(toc)
+
+    lines := str.Split(body, "\n")
+    defer lines.free()
+
+    mut in_code := false
+    mut fence_head := ""
+    mut code_lines := Vector {} as Vector<str>
+    defer code_lines.free()
+
+    mut in_callout := false
+    mut callout_kind := ""
+    mut callout_lines := Vector {} as Vector<str>
+    defer callout_lines.free()
+
+    mut para_lines := Vector {} as Vector<str>
+    defer para_lines.free()
+    mut list_kind := ""
+    mut list_items := Vector {} as Vector<str>
+    defer list_items.free()
+    mut quote_lines := Vector {} as Vector<str>
+    defer quote_lines.free()
+
+    n := lines.len()
+    mut i := 0
+    while i < n:
+        raw := lines.get(i)
+        line := str.TrimSuffix(raw, "\r")
+
+        if in_code:
+            if str.Trim(line) == "```":
+                blk.RenderCodeBlock(html, fence_head, code_lines)
+                code_lines.clear()
+                in_code = false
+            else:
+                code_lines.push(line)
+            end
+            i += 1
+            continue
+        end
+
+        if in_callout:
+            trimmed := str.Trim(line)
+            if trimmed == ":::":
+                blk.RenderCallout(html, callout_kind, callout_lines)
+                callout_lines.clear()
+                in_callout = false
+            else:
+                callout_lines.push(line)
+            end
+            i += 1
+            continue
+        end
+
+        if str.StartsWith(line, "```"):
+            blk.FlushOpenBlock(html, para_lines, list_kind, list_items, quote_lines)
+            fence_head = str.Trim(line.substr(3, line.len() - 3))
+            in_code = true
+            i += 1
+            continue
+        end
+
+        if str.StartsWith(line, ":::") && str.Trim(line) != ":::":
+            blk.FlushOpenBlock(html, para_lines, list_kind, list_items, quote_lines)
+            callout_kind = str.Trim(line.substr(3, line.len() - 3))
+            in_callout = true
+            i += 1
+            continue
+        end
+
+        if str.StartsWith(line, "# "):
+            blk.FlushOpenBlock(html, para_lines, list_kind, list_items, quote_lines)
+            text := str.Trim(line.substr(2, line.len() - 2))
+            id := blk.Slugify(text)
+            str.BufAppend(html, "<h1 id=\"")
+            str.BufAppend(html, id)
+            str.BufAppend(html, "\">")
+            str.BufAppend(html, inl.InlineHtml(text))
+            str.BufAppend(html, "</h1>\n\n")
+            i += 1
+            continue
+        end
+
+        if str.StartsWith(line, "## "):
+            blk.FlushOpenBlock(html, para_lines, list_kind, list_items, quote_lines)
+            text := str.Trim(line.substr(3, line.len() - 3))
+            id := blk.Slugify(text)
+            str.BufAppend(html, "<h2 id=\"")
+            str.BufAppend(html, id)
+            str.BufAppend(html, "\">")
+            str.BufAppend(html, inl.InlineHtml(text))
+            str.BufAppend(html, "</h2>\n\n")
+            str.BufAppend(toc, "<li><a href=\"#")
+            str.BufAppend(toc, id)
+            str.BufAppend(toc, "\">")
+            str.BufAppend(toc, esc.EscapeHtml(text))
+            str.BufAppend(toc, "</a></li>\n")
+            i += 1
+            continue
+        end
+
+        if str.StartsWith(line, "### "):
+            blk.FlushOpenBlock(html, para_lines, list_kind, list_items, quote_lines)
+            text := str.Trim(line.substr(4, line.len() - 4))
+            id := blk.Slugify(text)
+            str.BufAppend(html, "<h3 id=\"")
+            str.BufAppend(html, id)
+            str.BufAppend(html, "\">")
+            str.BufAppend(html, inl.InlineHtml(text))
+            str.BufAppend(html, "</h3>\n\n")
+            i += 1
+            continue
+        end
+
+        if str.StartsWith(line, "- ") || str.StartsWith(line, "* "):
+            if list_kind == "ol":
+                blk.FlushOpenBlock(html, para_lines, list_kind, list_items, quote_lines)
+            end
+            if para_lines.len() > 0 || quote_lines.len() > 0:
+                blk.FlushOpenBlock(html, para_lines, list_kind, list_items, quote_lines)
+            end
+            list_kind = "ul"
+            list_items.push(str.Trim(line.substr(2, line.len() - 2)))
+            i += 1
+            continue
+        end
+
+        ordered_dot := str.IndexOf(line, ". ")
+        is_ordered := ordered_dot > 0 && blk.IsAllDigits(line.substr(0, ordered_dot))
+        if is_ordered:
+            if list_kind == "ul":
+                blk.FlushOpenBlock(html, para_lines, list_kind, list_items, quote_lines)
+            end
+            if para_lines.len() > 0 || quote_lines.len() > 0:
+                blk.FlushOpenBlock(html, para_lines, list_kind, list_items, quote_lines)
+            end
+            list_kind = "ol"
+            list_items.push(str.Trim(line.substr(ordered_dot + 2, line.len() - ordered_dot - 2)))
+            i += 1
+            continue
+        end
+
+        if str.StartsWith(line, "> "):
+            if para_lines.len() > 0 || list_kind != "":
+                blk.FlushOpenBlock(html, para_lines, list_kind, list_items, quote_lines)
+            end
+            quote_lines.push(str.Trim(line.substr(2, line.len() - 2)))
+            i += 1
+            continue
+        end
+
+        if str.IsEmpty(str.Trim(line)):
+            blk.FlushOpenBlock(html, para_lines, list_kind, list_items, quote_lines)
+            i += 1
+            continue
+        end
+
+        if list_kind != "" || quote_lines.len() > 0:
+            blk.FlushOpenBlock(html, para_lines, list_kind, list_items, quote_lines)
+        end
+        para_lines.push(str.Trim(line))
+        i += 1
+    end
+
+    blk.FlushOpenBlock(html, para_lines, list_kind, list_items, quote_lines)
+    if in_code:
+        blk.RenderCodeBlock(html, fence_head, code_lines)
+    end
+    if in_callout:
+        blk.RenderCallout(html, callout_kind, callout_lines)
+    end
+
+    toc_out = str.BufStr(toc)
+    html_out = str.BufStr(html)
+end

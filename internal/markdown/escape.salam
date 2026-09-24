@@ -1,0 +1,10 @@
+package mdescape
+
+import str
+
+pub func EscapeHtml(s: str): str:
+    mut r := str.Replace(s, "&", "&amp;")
+    r = str.Replace(r, "<", "&lt;")
+    r = str.Replace(r, ">", "&gt;")
+    ret r
+end

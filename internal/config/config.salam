@@ -25,9 +25,6 @@ func str_field(obj: value.Value, key: str, def: str): str:
     ret value.AsString(v)
 end
 
-// Load reads neyx.config.yml at path; a missing file or a parse error
-// falls back to the defaults on Site rather than failing the build - a
-// brand new project should still build with nothing but content in it.
 pub func Load(path: str): Site:
     mut site := Site {}
     if !os.Exists(path): ret site end

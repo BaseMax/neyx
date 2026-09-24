@@ -1,0 +1,90 @@
+package mdinline
+
+import str
+import esc "escape.salam"
+
+pub func InlineHtml(text: str): str:
+    mut sb := str.NewBuilder()
+    defer str.BufFree(sb)
+    n := text.len()
+    mut i := 0
+    while i < n:
+        c := text.substr(i, 1)
+        if c == "`":
+            close := str.IndexFrom(text, "`", i + 1)
+            if close < 0:
+                str.BufAppend(sb, "&#96;")
+                i += 1
+            else:
+                inner := text.substr(i + 1, close - i - 1)
+                str.BufAppend(sb, "<code>")
+                str.BufAppend(sb, esc.EscapeHtml(inner))
+                str.BufAppend(sb, "</code>")
+                i = close + 1
+            end
+        else c == "*" && i + 1 < n && text.substr(i + 1, 1) == "*":
+            close := str.IndexFrom(text, "**", i + 2)
+            if close < 0:
+                str.BufAppend(sb, "**")
+                i += 2
+            else:
+                inner := text.substr(i + 2, close - i - 2)
+                str.BufAppend(sb, "<strong>")
+                str.BufAppend(sb, esc.EscapeHtml(inner))
+                str.BufAppend(sb, "</strong>")
+                i = close + 2
+            end
+        else c == "*":
+            close := str.IndexFrom(text, "*", i + 1)
+            if close < 0:
+                str.BufAppend(sb, "*")
+                i += 1
+            else:
+                inner := text.substr(i + 1, close - i - 1)
+                str.BufAppend(sb, "<em>")
+                str.BufAppend(sb, esc.EscapeHtml(inner))
+                str.BufAppend(sb, "</em>")
+                i = close + 1
+            end
+        else c == "[":
+            close_bracket := str.IndexFrom(text, "]", i + 1)
+            mut handled := false
+            if close_bracket >= 0 && close_bracket + 1 < n && text.substr(close_bracket + 1, 1) == "(":
+                close_paren := str.IndexFrom(text, ")", close_bracket + 2)
+                if close_paren >= 0:
+                    label := text.substr(i + 1, close_bracket - i - 1)
+                    url := text.substr(close_bracket + 2, close_paren - close_bracket - 2)
+                    is_ext := str.StartsWith(url, "http")
+                    str.BufAppend(sb, "<a href=\"")
+                    str.BufAppend(sb, esc.EscapeHtml(url))
+                    str.BufAppend(sb, "\"")
+                    if is_ext:
+                        str.BufAppend(sb, " target=\"_blank\" rel=\"noopener\"")
+                    end
+                    str.BufAppend(sb, ">")
+                    str.BufAppend(sb, esc.EscapeHtml(label))
+                    str.BufAppend(sb, "</a>")
+                    i = close_paren + 1
+                    handled = true
+                end
+            end
+            if !handled:
+                str.BufAppend(sb, "[")
+                i += 1
+            end
+        else c == "<":
+            str.BufAppend(sb, "&lt;")
+            i += 1
+        else c == ">":
+            str.BufAppend(sb, "&gt;")
+            i += 1
+        else c == "&":
+            str.BufAppend(sb, "&amp;")
+            i += 1
+        else:
+            str.BufAppend(sb, c)
+            i += 1
+        end
+    end
+    ret str.BufStr(sb)
+end

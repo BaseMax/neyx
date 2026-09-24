@@ -1,0 +1,126 @@
+package mdblocks
+
+import str
+import esc "escape.salam"
+import inl "inline.salam"
+
+pub func IsAllDigits(s: str): bool:
+    n := s.len()
+    if n == 0: ret false end
+    mut i := 0
+    while i < n:
+        c := s.substr(i, 1)
+        if c < "0" || c > "9": ret false end
+        i += 1
+    end
+    ret true
+end
+
+pub func Slugify(text: str): str:
+    mut sb := str.NewBuilder()
+    defer str.BufFree(sb)
+    n := text.len()
+    mut i := 0
+    mut last_dash := true
+    while i < n:
+        c := text.substr(i, 1)
+        lower := str.Lower(c)
+        is_alnum := (lower >= "a" && lower <= "z") || (c >= "0" && c <= "9")
+        if is_alnum:
+            str.BufAppend(sb, lower)
+            last_dash = false
+        else:
+            if !last_dash:
+                str.BufAppend(sb, "-")
+                last_dash = true
+            end
+        end
+        i += 1
+    end
+    out := str.BufStr(sb)
+    ret str.TrimSuffix(out, "-")
+end
+
+pub func FlushOpenBlock(sb &: str.StringBuilder, para_lines &: Vector<str>, list_kind &: str, list_items &: Vector<str>, quote_lines &: Vector<str>):
+    if para_lines.len() > 0:
+        joined := str.Join(para_lines, " ")
+        str.BufAppend(sb, "<p>")
+        str.BufAppend(sb, inl.InlineHtml(joined))
+        str.BufAppend(sb, "</p>\n\n")
+        para_lines.clear()
+    end
+    if list_kind != "":
+        tag := list_kind
+        str.BufAppend(sb, "<")
+        str.BufAppend(sb, tag)
+        str.BufAppend(sb, ">\n")
+        repeat list_items.len() with i:
+            str.BufAppend(sb, "  <li>")
+            str.BufAppend(sb, inl.InlineHtml(list_items.get(i)))
+            str.BufAppend(sb, "</li>\n")
+        end
+        str.BufAppend(sb, "</")
+        str.BufAppend(sb, tag)
+        str.BufAppend(sb, ">\n\n")
+        list_items.clear()
+        list_kind = ""
+    end
+    if quote_lines.len() > 0:
+        str.BufAppend(sb, "<blockquote>\n")
+        repeat quote_lines.len() with i:
+            str.BufAppend(sb, "  <p>")
+            str.BufAppend(sb, inl.InlineHtml(quote_lines.get(i)))
+            str.BufAppend(sb, "</p>\n")
+        end
+        str.BufAppend(sb, "</blockquote>\n\n")
+        quote_lines.clear()
+    end
+end
+
+pub func RenderCodeBlock(sb &: str.StringBuilder, fence_head: str, code_lines: Vector<str>):
+    mut lang := fence_head
+    colon := str.IndexOf(fence_head, ":")
+    if colon >= 0:
+        lang = fence_head.substr(0, colon)
+    end
+    if str.IsEmpty(lang): lang = "text" end
+
+    str.BufAppend(sb, "<pre><code class=\"language-")
+    str.BufAppend(sb, lang)
+    str.BufAppend(sb, "\">")
+    repeat code_lines.len() with i:
+        if i > 0: str.BufAppend(sb, "\n") end
+        str.BufAppend(sb, esc.EscapeHtml(code_lines.get(i)))
+    end
+    str.BufAppend(sb, "</code></pre>\n\n")
+end
+
+pub func RenderCallout(sb &: str.StringBuilder, kind: str, lines: Vector<str>):
+    str.BufAppend(sb, "<div class=\"callout callout-")
+    str.BufAppend(sb, kind)
+    str.BufAppend(sb, "\">\n")
+    mut para := Vector {} as Vector<str>
+    defer para.free()
+    n := lines.len()
+    mut i := 0
+    while i < n:
+        line := lines.get(i)
+        if str.IsEmpty(str.Trim(line)):
+            if para.len() > 0:
+                str.BufAppend(sb, "  <p>")
+                str.BufAppend(sb, inl.InlineHtml(str.Join(para, " ")))
+                str.BufAppend(sb, "</p>\n")
+                para.clear()
+            end
+        else:
+            para.push(line)
+        end
+        i += 1
+    end
+    if para.len() > 0:
+        str.BufAppend(sb, "  <p>")
+        str.BufAppend(sb, inl.InlineHtml(str.Join(para, " ")))
+        str.BufAppend(sb, "</p>\n")
+    end
+    str.BufAppend(sb, "</div>\n\n")
+end
