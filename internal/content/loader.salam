@@ -58,7 +58,8 @@ func load_page(dir: str, path: str, languages: Vector<str>): p.Page:
     split_lang(no_ext, languages, lang, rest)
     page.lang = lang
 
-    mut route := route_for(rest)
+    unprefixed_route := route_for(rest)
+    mut route := unprefixed_route
     if lang != "":
         if route == "/":
             route = "/" + lang + "/"
@@ -75,6 +76,7 @@ func load_page(dir: str, path: str, languages: Vector<str>): p.Page:
     page.front = front
 
     page.tmpl = p.StrField(page.front, "layout", "default")
+    page.lang_key = p.StrField(page.front, "translation_key", unprefixed_route)
 
     mut toc := ""
     mut html := ""

@@ -20,7 +20,7 @@ import imagepipe "../imagepipe/imagepipe.salam"
 import search "../search/search.salam"
 import encoding.json
 
-const DEFAULT_LAYOUT := "<!doctype html>\n<html lang=\"{{ lang }}\" dir=\"{{ dir }}\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>{{ title }}</title>\n{{ if description }}<meta name=\"description\" content=\"{{ description }}\">{{ end }}\n{{ if noindex }}<meta name=\"robots\" content=\"noindex\">{{ end }}\n<link rel=\"canonical\" href=\"{{ site.url }}{{ url }}\">\n<meta property=\"og:title\" content=\"{{ title }}\">\n{{ if description }}<meta property=\"og:description\" content=\"{{ description }}\">{{ end }}\n<meta property=\"og:url\" content=\"{{ site.url }}{{ url }}\">\n<meta property=\"og:type\" content=\"website\">\n<meta name=\"twitter:card\" content=\"summary\">\n</head>\n<body>\n{{ & content }}\n</body>\n</html>\n"
+const DEFAULT_LAYOUT := "<!doctype html>\n<html lang=\"{{ lang }}\" dir=\"{{ dir }}\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>{{ title }}</title>\n{{ if description }}<meta name=\"description\" content=\"{{ description }}\">{{ end }}\n{{ if noindex }}<meta name=\"robots\" content=\"noindex\">{{ end }}\n<link rel=\"canonical\" href=\"{{ site.url }}{{ url }}\">\n{{ each t in translations }}<link rel=\"alternate\" hreflang=\"{{ t.lang }}\" href=\"{{ site.url }}{{ t.url }}\">{{ end }}\n<meta property=\"og:title\" content=\"{{ title }}\">\n{{ if description }}<meta property=\"og:description\" content=\"{{ description }}\">{{ end }}\n<meta property=\"og:url\" content=\"{{ site.url }}{{ url }}\">\n<meta property=\"og:type\" content=\"website\">\n<meta name=\"twitter:card\" content=\"summary\">\n</head>\n<body>\n{{ & content }}\n</body>\n</html>\n"
 
 func text_dir(lang: str): str:
     if lang == "fa" || lang == "ar" || lang == "he" || lang == "ur": ret "rtl" end
@@ -30,6 +30,21 @@ end
 func effective_lang(site: config.Site, page: p.Page): str:
     if page.lang != "": ret page.lang end
     ret site.language
+end
+
+func translations_for(page: p.Page, all_pages: Vector<p.Page>): value.Value:
+    mut arr := value.NewValueArray()
+    if page.lang == "": ret arr end
+    repeat all_pages.len() with i:
+        other := all_pages.get(i)
+        if other.lang != "" && other.lang != page.lang && other.lang_key == page.lang_key:
+            mut entry := value.NewValueObject()
+            value.ObjectSet(entry, "lang", value.ValueString(other.lang))
+            value.ObjectSet(entry, "url", value.ValueString(other.route))
+            value.ArrayPush(arr, entry)
+        end
+    end
+    ret arr
 end
 
 func theme_layout_path(site: config.Site, name: str): str:
@@ -113,6 +128,7 @@ func render_page(site: config.Site, page: p.Page, pages: Vector<p.Page>, posts: 
     value.ObjectSet(root, "data", data_val)
     value.ObjectSet(root, "lang", value.ValueString(lang))
     value.ObjectSet(root, "dir", value.ValueString(text_dir(lang)))
+    value.ObjectSet(root, "translations", translations_for(page, pages))
     tpl_text := layout_for(site, page.tmpl)
     ret tmpl.Render(tpl_text, root)
 end
@@ -176,6 +192,7 @@ func write_paginated(site: config.Site, page: p.Page, pages: Vector<p.Page>, pos
         value.ObjectSet(root, "data", data_val)
         value.ObjectSet(root, "lang", value.ValueString(lang))
         value.ObjectSet(root, "dir", value.ValueString(text_dir(lang)))
+        value.ObjectSet(root, "translations", translations_for(page, pages))
 
         mut pg := value.NewValueObject()
         value.ObjectSet(pg, "page", value.ValueInt(page_num as i64))
