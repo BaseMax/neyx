@@ -331,6 +331,11 @@ pub func Run(args: Vector<str>):
     io.WriteFile(site.output + "/feed.xml", feed_xml)
     if !quiet: println "  wrote", site.output + "/feed.xml" end
 
+    mut atom_xml := feed.BuildAtom(site, posts)
+    if do_minify: atom_xml = minify.Xml(atom_xml) end
+    io.WriteFile(site.output + "/atom.xml", atom_xml)
+    if !quiet: println "  wrote", site.output + "/atom.xml" end
+
     write_robots(site, quiet)
 
     os.MkdirAll(site.output + "/api")

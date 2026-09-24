@@ -5,6 +5,12 @@ import config "../config/config.salam"
 import p "../content/page.salam"
 import esc "../markdown/escape.salam"
 
+func iso8601(date: str): str:
+    if date == "": ret date end
+    if str.IndexOf(date, "T") >= 0: ret date end
+    ret date + "T00:00:00Z"
+end
+
 pub func Build(site: config.Site, posts: Vector<p.Page>): str:
     mut b := str.NewBuilder()
     defer str.BufFree(b)
@@ -52,5 +58,59 @@ pub func Build(site: config.Site, posts: Vector<p.Page>): str:
     end
 
     str.BufAppend(b, "</channel></rss>\n")
+    ret str.BufStr(b)
+end
+
+pub func BuildAtom(site: config.Site, posts: Vector<p.Page>): str:
+    mut b := str.NewBuilder()
+    defer str.BufFree(b)
+    str.BufAppend(b, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
+    str.BufAppend(b, "<feed xmlns=\"http://www.w3.org/2005/Atom\">\n")
+    str.BufAppend(b, "  <title>")
+    str.BufAppend(b, esc.EscapeHtml(site.title))
+    str.BufAppend(b, "</title>\n")
+    str.BufAppend(b, "  <link href=\"")
+    str.BufAppend(b, esc.EscapeHtml(site.url))
+    str.BufAppend(b, "\"/>\n")
+    str.BufAppend(b, "  <id>")
+    str.BufAppend(b, esc.EscapeHtml(site.url))
+    str.BufAppend(b, "/</id>\n")
+
+    mut updated := "1970-01-01T00:00:00Z"
+    if posts.len() > 0:
+        updated = iso8601(p.Date(posts.get(0)))
+    end
+    str.BufAppend(b, "  <updated>")
+    str.BufAppend(b, updated)
+    str.BufAppend(b, "</updated>\n")
+
+    repeat posts.len() with i:
+        page := posts.get(i)
+        link := site.url + page.route
+        str.BufAppend(b, "  <entry>\n")
+        str.BufAppend(b, "    <title>")
+        str.BufAppend(b, esc.EscapeHtml(p.Title(page)))
+        str.BufAppend(b, "</title>\n")
+        str.BufAppend(b, "    <link href=\"")
+        str.BufAppend(b, esc.EscapeHtml(link))
+        str.BufAppend(b, "\"/>\n")
+        str.BufAppend(b, "    <id>")
+        str.BufAppend(b, esc.EscapeHtml(link))
+        str.BufAppend(b, "</id>\n")
+        str.BufAppend(b, "    <updated>")
+        str.BufAppend(b, iso8601(p.Date(page)))
+        str.BufAppend(b, "</updated>\n")
+
+        desc := p.Description(page)
+        if desc != "":
+            str.BufAppend(b, "    <summary>")
+            str.BufAppend(b, esc.EscapeHtml(desc))
+            str.BufAppend(b, "</summary>\n")
+        end
+
+        str.BufAppend(b, "  </entry>\n")
+    end
+
+    str.BufAppend(b, "</feed>\n")
     ret str.BufStr(b)
 end
