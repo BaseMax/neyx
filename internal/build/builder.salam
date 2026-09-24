@@ -128,6 +128,10 @@ pub func Run(_args: Vector<str>):
 
     write_robots(site)
 
+    if os.IsDir(site.static_dir):
+        os.CopyTree(site.static_dir, site.output)
+    end
+
     println ""
     println "Built", pages.len(), "page(s) into", site.output
 end
