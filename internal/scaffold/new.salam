@@ -1,5 +1,40 @@
 package scaffold
 
-pub func Run(_args: Vector<str>):
-    println "neyx new: not implemented yet"
+import os
+import io
+
+const CONFIG_TPL := "title: \"My Site\"\ndescription: \"A new Neyx site\"\nurl: \"https://example.com\"\nlanguage: \"en\"\noutput: \"dist\"\n"
+
+const INDEX_TPL := "---\ntitle: \"Home\"\ndescription: \"Welcome to my new Neyx site\"\n---\n\n# Welcome to Neyx\n\nThis is your new site. Edit `content/index.md` to get started.\n"
+
+const LAYOUT_TPL := "<!doctype html>\n<html lang=\"{{ site.language }}\">\n<head>\n<meta charset=\"utf-8\">\n<title>{{ title }} - {{ site.title }}</title>\n{{ if description }}<meta name=\"description\" content=\"{{ description }}\">{{ end }}\n</head>\n<body>\n<main>\n{{ & content }}\n</main>\n</body>\n</html>\n"
+
+pub func Run(args: Vector<str>):
+    if args.len() == 0:
+        printerrln "usage: neyx new <name>"
+        os.Exit(1)
+    end
+
+    name := args.get(0)
+    if os.Exists(name):
+        printerrln "neyx: '" + name + "' already exists"
+        os.Exit(1)
+    end
+
+    os.MkdirAll(name + "/content")
+    os.MkdirAll(name + "/layouts")
+    os.MkdirAll(name + "/assets")
+
+    io.WriteFile(name + "/neyx.config.yml", CONFIG_TPL)
+    io.WriteFile(name + "/content/index.md", INDEX_TPL)
+    io.WriteFile(name + "/layouts/default.html", LAYOUT_TPL)
+
+    println "Created project '" + name + "':"
+    println "  " + name + "/neyx.config.yml"
+    println "  " + name + "/content/index.md"
+    println "  " + name + "/layouts/default.html"
+    println ""
+    println "Next steps:"
+    println "  cd " + name
+    println "  neyx dev"
 end
