@@ -5,6 +5,7 @@ import io
 import str
 import flag
 import conv
+import time
 import encoding.value
 import config "../config/config.salam"
 import content "../content/loader.salam"
@@ -14,6 +15,7 @@ import sitemap "../sitemap/sitemap.salam"
 import feed "../feed/feed.salam"
 import taxonomy "../taxonomy/taxonomy.salam"
 import data "../data/data.salam"
+import minify "../minify/minify.salam"
 
 const DEFAULT_LAYOUT := "<!doctype html>\n<html lang=\"{{ site.language }}\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>{{ title }}</title>\n{{ if description }}<meta name=\"description\" content=\"{{ description }}\">{{ end }}\n<link rel=\"canonical\" href=\"{{ site.url }}{{ url }}\">\n<meta property=\"og:title\" content=\"{{ title }}\">\n{{ if description }}<meta property=\"og:description\" content=\"{{ description }}\">{{ end }}\n<meta property=\"og:url\" content=\"{{ site.url }}{{ url }}\">\n<meta property=\"og:type\" content=\"website\">\n<meta name=\"twitter:card\" content=\"summary\">\n</head>\n<body>\n{{ & content }}\n</body>\n</html>\n"
 
@@ -73,8 +75,9 @@ func render_page(site: config.Site, page: p.Page, all_val: value.Value, posts_va
     ret tmpl.Render(tpl_text, root)
 end
 
-func write_page(site: config.Site, page: p.Page, all_val: value.Value, posts_val: value.Value, data_val: value.Value):
-    html := render_page(site, page, all_val, posts_val, data_val)
+func write_page(site: config.Site, page: p.Page, all_val: value.Value, posts_val: value.Value, data_val: value.Value, do_minify: bool):
+    mut html := render_page(site, page, all_val, posts_val, data_val)
+    if do_minify: html = minify.Html(html) end
     dir := site.output + page.route
     os.MkdirAll(dir)
     io.WriteFile(dir + "index.html", html)
@@ -102,7 +105,7 @@ func page_num_route(base_route: str, page_num: int): str:
     ret base_route + "page/" + conv.FormatInt(page_num as i64) + "/"
 end
 
-func write_paginated(site: config.Site, page: p.Page, posts: Vector<p.Page>, all_val: value.Value, data_val: value.Value):
+func write_paginated(site: config.Site, page: p.Page, posts: Vector<p.Page>, all_val: value.Value, data_val: value.Value, do_minify: bool):
     size := site.pagination_size
     mut total_pages := ceil_div(posts.len(), size)
     if total_pages < 1: total_pages = 1 end
@@ -130,7 +133,8 @@ func write_paginated(site: config.Site, page: p.Page, posts: Vector<p.Page>, all
         value.ObjectSet(root, "pagination", pg)
 
         tpl_text := layout_for(site, page.tmpl)
-        html := tmpl.Render(tpl_text, root)
+        mut html := tmpl.Render(tpl_text, root)
+        if do_minify: html = minify.Html(html) end
 
         dir := site.output + route
         os.MkdirAll(dir)
@@ -164,10 +168,14 @@ func write_robots(site: config.Site):
 end
 
 pub func Run(args: Vector<str>):
+    start_ns := time.MonoNanos()
+
     mut fs := flag.New("neyx build", "Build the site for production")
     flag.AddBool(fs, "drafts", "", false, "Include draft content")
+    flag.AddBool(fs, "pretty", "", false, "Skip HTML/XML minification")
     flag.Parse(fs, args)
     include_drafts := flag.GetBool(fs, "drafts")
+    do_minify := !flag.GetBool(fs, "pretty")
 
     site := config.Load("neyx.config.yml")
 
@@ -192,13 +200,13 @@ pub func Run(args: Vector<str>):
     os.MkdirAll(site.output)
 
     repeat pages.len() with i:
-        write_page(site, pages.get(i), all_val, posts_val, data_val)
+        write_page(site, pages.get(i), all_val, posts_val, data_val, do_minify)
     end
 
     repeat pages.len() with i:
         page := pages.get(i)
         if p.BoolField(page.front, "paginate", false):
-            write_paginated(site, page, posts, all_val, data_val)
+            write_paginated(site, page, posts, all_val, data_val, do_minify)
         end
     end
 
@@ -206,13 +214,15 @@ pub func Run(args: Vector<str>):
         os.CopyTree(site.assets_dir, site.output + "/assets")
     end
 
-    taxonomy.Build(site, pages)
+    taxonomy.Build(site, pages, do_minify)
 
-    sitemap_xml := sitemap.Build(site, pages)
+    mut sitemap_xml := sitemap.Build(site, pages)
+    if do_minify: sitemap_xml = minify.Xml(sitemap_xml) end
     io.WriteFile(site.output + "/sitemap.xml", sitemap_xml)
     println "  wrote", site.output + "/sitemap.xml"
 
-    feed_xml := feed.Build(site, posts)
+    mut feed_xml := feed.Build(site, posts)
+    if do_minify: feed_xml = minify.Xml(feed_xml) end
     io.WriteFile(site.output + "/feed.xml", feed_xml)
     println "  wrote", site.output + "/feed.xml"
 
@@ -222,6 +232,7 @@ pub func Run(args: Vector<str>):
         os.CopyTree(site.static_dir, site.output)
     end
 
+    elapsed_ms := time.SinceMs(start_ns)
     println ""
-    println "Built", pages.len(), "page(s) into", site.output
+    println "Built", pages.len(), "page(s) into", site.output, "in", conv.FormatFloatPrec(elapsed_ms, 2), "ms"
 end

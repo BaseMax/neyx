@@ -1,0 +1,147 @@
+package minify
+
+import str
+
+func is_whitespace_only(s: str): bool:
+    n := s.len()
+    mut i := 0
+    while i < n:
+        c := s.substr(i, 1)
+        if c != " " && c != "\t" && c != "\n" && c != "\r": ret false end
+        i += 1
+    end
+    ret true
+end
+
+func collapse_whitespace(s: str): str:
+    mut sb := str.NewBuilder()
+    defer str.BufFree(sb)
+    n := s.len()
+    mut i := 0
+    mut in_ws := false
+    while i < n:
+        c := s.substr(i, 1)
+        is_ws := c == " " || c == "\t" || c == "\n" || c == "\r"
+        if is_ws:
+            in_ws = true
+        else:
+            if in_ws:
+                str.BufAppend(sb, " ")
+                in_ws = false
+            end
+            str.BufAppend(sb, c)
+        end
+        i += 1
+    end
+    if in_ws: str.BufAppend(sb, " ") end
+    ret str.BufStr(sb)
+end
+
+func tag_name_lower(tag: str): str:
+    n := tag.len()
+    mut i := 1
+    if i < n && tag.substr(i, 1) == "/": i += 1 end
+    start := i
+    while i < n:
+        c := tag.substr(i, 1)
+        is_end := c == " " || c == "\t" || c == "\n" || c == "\r" || c == ">" || c == "/"
+        if is_end: break end
+        i += 1
+    end
+    ret str.Lower(tag.substr(start, i - start))
+end
+
+func is_closing_tag(tag: str): bool:
+    ret tag.len() > 1 && tag.substr(1, 1) == "/"
+end
+
+func contains_tag(tags: Vector<str>, name: str): bool:
+    n := tags.len()
+    mut i := 0
+    while i < n:
+        if tags.get(i) == name: ret true end
+        i += 1
+    end
+    ret false
+end
+
+pub func Markup(src_text: str, preserve: Vector<str>): str:
+    mut out := str.NewBuilder()
+    defer str.BufFree(out)
+    n := src_text.len()
+    mut i := 0
+    while i < n:
+        c := src_text.substr(i, 1)
+        if c == "<":
+            mut is_comment := false
+            if i + 4 <= n: is_comment = src_text.substr(i, 4) == "<!--" end
+            if is_comment:
+                close := str.IndexFrom(src_text, "-->", i + 4)
+                if close < 0:
+                    i = n
+                else:
+                    i = close + 3
+                end
+                continue
+            end
+
+            tag_end := str.IndexFrom(src_text, ">", i)
+            if tag_end < 0:
+                str.BufAppend(out, src_text.substr(i, n - i))
+                i = n
+                continue
+            end
+
+            tag := src_text.substr(i, tag_end - i + 1)
+            str.BufAppend(out, tag)
+            i = tag_end + 1
+
+            if !is_closing_tag(tag):
+                name := tag_name_lower(tag)
+                if contains_tag(preserve, name):
+                    close_pattern := "</" + name
+                    close_idx := str.IndexFrom(src_text, close_pattern, i)
+                    if close_idx < 0:
+                        str.BufAppend(out, src_text.substr(i, n - i))
+                        i = n
+                    else:
+                        close_tag_end := str.IndexFrom(src_text, ">", close_idx)
+                        if close_tag_end < 0:
+                            str.BufAppend(out, src_text.substr(i, n - i))
+                            i = n
+                        else:
+                            str.BufAppend(out, src_text.substr(i, close_tag_end - i + 1))
+                            i = close_tag_end + 1
+                        end
+                    end
+                end
+            end
+            continue
+        end
+
+        mut text_end := str.IndexFrom(src_text, "<", i)
+        if text_end < 0: text_end = n end
+        text_node := src_text.substr(i, text_end - i)
+        if !is_whitespace_only(text_node):
+            str.BufAppend(out, collapse_whitespace(text_node))
+        end
+        i = text_end
+    end
+    ret str.BufStr(out)
+end
+
+pub func Html(src_text: str): str:
+    mut preserve := Vector {} as Vector<str>
+    defer preserve.free()
+    preserve.push("pre")
+    preserve.push("script")
+    preserve.push("style")
+    preserve.push("textarea")
+    ret Markup(src_text, preserve)
+end
+
+pub func Xml(src_text: str): str:
+    preserve := Vector {} as Vector<str>
+    defer preserve.free()
+    ret Markup(src_text, preserve)
+end

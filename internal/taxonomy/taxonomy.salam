@@ -8,6 +8,7 @@ import config "../config/config.salam"
 import p "../content/page.salam"
 import blk "../markdown/blocks.salam"
 import tmpl "../tmpl/tmpl.salam"
+import minify "../minify/minify.salam"
 
 const DEFAULT_TAG_LAYOUT := "<!doctype html><html><head><title>{{ tag }} - {{ site.title }}</title></head><body><h1>Tag: {{ tag }}</h1><ul>{{ each item in items }}<li><a href=\"{{ item.url }}\">{{ item.title }}</a></li>{{ end }}</ul></body></html>"
 
@@ -60,7 +61,7 @@ func page_summary(page: p.Page): value.Value:
     ret v
 end
 
-func write_tag_page(site: config.Site, tag: str, pages: Vector<p.Page>):
+func write_tag_page(site: config.Site, tag: str, pages: Vector<p.Page>, do_minify: bool):
     slug := blk.Slugify(tag)
     mut items := value.NewValueArray()
     repeat pages.len() with i:
@@ -76,7 +77,8 @@ func write_tag_page(site: config.Site, tag: str, pages: Vector<p.Page>):
     value.ObjectSet(root, "site", site.data)
 
     tpl_text := layout_or(site, "tag", DEFAULT_TAG_LAYOUT)
-    html := tmpl.Render(tpl_text, root)
+    mut html := tmpl.Render(tpl_text, root)
+    if do_minify: html = minify.Html(html) end
 
     dir := site.output + "/tags/" + slug + "/"
     os.MkdirAll(dir)
@@ -84,7 +86,7 @@ func write_tag_page(site: config.Site, tag: str, pages: Vector<p.Page>):
     println "  wrote", dir + "index.html"
 end
 
-func write_tags_index(site: config.Site, tags: Vector<str>, pages: Vector<p.Page>):
+func write_tags_index(site: config.Site, tags: Vector<str>, pages: Vector<p.Page>, do_minify: bool):
     mut tags_arr := value.NewValueArray()
     repeat tags.len() with i:
         tag := tags.get(i)
@@ -106,7 +108,8 @@ func write_tags_index(site: config.Site, tags: Vector<str>, pages: Vector<p.Page
     value.ObjectSet(root, "site", site.data)
 
     tpl_text := layout_or(site, "tags", DEFAULT_TAGS_INDEX_LAYOUT)
-    html := tmpl.Render(tpl_text, root)
+    mut html := tmpl.Render(tpl_text, root)
+    if do_minify: html = minify.Html(html) end
 
     dir := site.output + "/tags/"
     os.MkdirAll(dir)
@@ -114,13 +117,13 @@ func write_tags_index(site: config.Site, tags: Vector<str>, pages: Vector<p.Page
     println "  wrote", dir + "index.html"
 end
 
-pub func Build(site: config.Site, pages: Vector<p.Page>):
+pub func Build(site: config.Site, pages: Vector<p.Page>, do_minify: bool):
     tags := collect_tags(pages)
     defer tags.free()
     if tags.len() == 0: ret end
 
     repeat tags.len() with i:
-        write_tag_page(site, tags.get(i), pages)
+        write_tag_page(site, tags.get(i), pages, do_minify)
     end
-    write_tags_index(site, tags, pages)
+    write_tags_index(site, tags, pages, do_minify)
 end
