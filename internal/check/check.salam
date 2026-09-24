@@ -1,0 +1,115 @@
+package check
+
+import os
+import io
+import str
+import collections
+import config "../config/config.salam"
+import content "../content/loader.salam"
+
+func find_all(text: str, attr: str): Vector<str>:
+    mut out := Vector {} as Vector<str>
+    n := text.len()
+    mut i := 0
+    while i < n:
+        idx := str.IndexFrom(text, attr, i)
+        if idx < 0:
+            i = n
+        else:
+            start := idx + attr.len()
+            close := str.IndexFrom(text, "\"", start)
+            if close < 0:
+                i = n
+            else:
+                out.push(text.substr(start, close - start))
+                i = close + 1
+            end
+        end
+    end
+    ret out
+end
+
+func strip_query_hash(link: str): str:
+    mut l := link
+    hash := str.IndexOf(l, "#")
+    if hash >= 0: l = l.substr(0, hash) end
+    q := str.IndexOf(l, "?")
+    if q >= 0: l = l.substr(0, q) end
+    ret l
+end
+
+func is_external(link: str): bool:
+    if str.StartsWith(link, "http://"): ret true end
+    if str.StartsWith(link, "https://"): ret true end
+    if str.StartsWith(link, "//"): ret true end
+    if str.StartsWith(link, "mailto:"): ret true end
+    if str.StartsWith(link, "tel:"): ret true end
+    if str.StartsWith(link, "#"): ret true end
+    ret false
+end
+
+func exists_in_dist(dist: str, link: str): bool:
+    clean := strip_query_hash(link)
+    if clean == "": ret true end
+    if str.EndsWith(clean, "/"): ret os.Exists(dist + clean + "index.html") end
+    ret os.Exists(dist + clean)
+end
+
+pub func Run(_args: Vector<str>):
+    site := config.Load("neyx.config.yml")
+
+    if !os.IsDir(site.output):
+        printerrln "neyx: nothing built yet - run 'neyx build' first"
+        os.Exit(1)
+    end
+
+    mut problems := 0
+
+    pages := content.LoadAll(site.content_dir)
+    defer pages.free()
+    mut seen_routes := Vector {} as Vector<str>
+    defer seen_routes.free()
+    repeat pages.len() with i:
+        page := pages.get(i)
+        if collections.contains(seen_routes, page.route):
+            printerrln "duplicate route:", page.route, "(" + page.source_path + ")"
+            problems += 1
+        else:
+            seen_routes.push(page.route)
+        end
+    end
+
+    files := os.Walk(site.output)
+    defer files.free()
+    each file in files:
+        if str.EndsWith(file, ".html"):
+            text := io.ReadFile(file)
+
+            hrefs := find_all(text, "href=\"")
+            defer hrefs.free()
+            each link in hrefs:
+                if !is_external(link) && str.StartsWith(link, "/") && !exists_in_dist(site.output, link):
+                    printerrln "broken link:", file, "->", link
+                    problems += 1
+                end
+            end
+
+            srcs := find_all(text, "src=\"")
+            defer srcs.free()
+            each link in srcs:
+                if !is_external(link) && str.StartsWith(link, "/") && !exists_in_dist(site.output, link):
+                    printerrln "missing asset:", file, "->", link
+                    problems += 1
+                end
+            end
+        end
+    end
+
+    if problems == 0:
+        println "neyx check: no problems found"
+    else:
+        println ""
+        println "neyx check:", problems, "problem(s) found"
+        os.Exit(1)
+    end
+end
