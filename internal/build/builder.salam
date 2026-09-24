@@ -3,6 +3,8 @@ package build
 import config "../config/config.salam"
 import content "../content/loader.salam"
 import p "../content/page.salam"
+import tmpl "../tmpl/tmpl.salam"
+import encoding.value
 
 pub func Run(_args: Vector<str>):
     site := config.Load("neyx.config.yml")
@@ -13,5 +15,12 @@ pub func Run(_args: Vector<str>):
     repeat pages.len() with i:
         page := pages.get(i)
         println page.route, "<-", page.source_path, "title:", p.Title(page), "layout:", page.tmpl
+
+        mut root := value.ValueClone(page.front)
+        value.ObjectSet(root, "content", value.ValueString(page.content_html))
+        value.ObjectSet(root, "site", site.data)
+
+        out := tmpl.Render("<h1>{{ title }}</h1>\n{{ & content }}\n{{ if description }}<p>{{ description }}</p>{{ end }}\nsite: {{ site.title }}\n", root)
+        println out
     end
 end

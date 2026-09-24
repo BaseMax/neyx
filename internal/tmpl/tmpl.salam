@@ -1,0 +1,246 @@
+package tmpl
+
+import str
+import conv
+import encoding.value
+import esc "../markdown/escape.salam"
+
+pub const NodeText := 0
+pub const NodeVar := 1
+pub const NodeRaw := 2
+pub const NodeIf := 3
+pub const NodeEach := 4
+
+pub struct Node:
+    pub kind: int = NodeText
+    pub text: str = ""
+    pub path: str = ""
+    pub negate: bool = false
+    pub loop_var: str = ""
+    pub body: Vector<Node> = Vector {} as Vector<Node>
+    pub else_body: Vector<Node> = Vector {} as Vector<Node>
+end
+
+pub struct Frame:
+    pub name: str = ""
+    pub val: value.Value = value.Value {}
+end
+
+func find_tag(t: str, from: int, tag_out &: str, start_out &: int, end_out &: int): bool:
+    lb := str.IndexFrom(t, "{{", from)
+    if lb < 0: ret false end
+    rb := str.IndexFrom(t, "}}", lb + 2)
+    if rb < 0: ret false end
+    tag_out = str.Trim(t.substr(lb + 2, rb - lb - 2))
+    start_out = lb
+    end_out = rb + 2
+    ret true
+end
+
+func parse_nodes(t: str, pos &: int, ended &: str): Vector<Node>:
+    mut nodes := Vector {} as Vector<Node>
+    n := t.len()
+    while pos < n:
+        mut tag := ""
+        mut tstart := 0
+        mut tend := 0
+        found := find_tag(t, pos, tag, tstart, tend)
+
+        if !found:
+            mut node := Node { kind = NodeText }
+            node.text = t.substr(pos, n - pos)
+            nodes.push(node)
+            pos = n
+            ended = ""
+            ret nodes
+        end
+
+        if tstart > pos:
+            mut node := Node { kind = NodeText }
+            node.text = t.substr(pos, tstart - pos)
+            nodes.push(node)
+        end
+
+        if tag == "else":
+            pos = tend
+            ended = "else"
+            ret nodes
+        end
+
+        if tag == "end":
+            pos = tend
+            ended = "end"
+            ret nodes
+        end
+
+        if str.StartsWith(tag, "if "):
+            cond := str.Trim(tag.substr(3, tag.len() - 3))
+            mut negate := false
+            mut path := cond
+            if str.StartsWith(cond, "!"):
+                negate = true
+                path = str.Trim(cond.substr(1, cond.len() - 1))
+            end
+            pos = tend
+            mut then_ended := ""
+            body := parse_nodes(t, pos, then_ended)
+            mut else_body := Vector {} as Vector<Node>
+            if then_ended == "else":
+                mut else_ended := ""
+                else_body = parse_nodes(t, pos, else_ended)
+            end
+            mut node := Node { kind = NodeIf }
+            node.path = path
+            node.negate = negate
+            node.body = body
+            node.else_body = else_body
+            nodes.push(node)
+            continue
+        end
+
+        if str.StartsWith(tag, "each "):
+            rest := str.Trim(tag.substr(5, tag.len() - 5))
+            in_idx := str.IndexOf(rest, " in ")
+            mut loop_var := rest
+            mut src_path := ""
+            if in_idx > 0:
+                loop_var = str.Trim(rest.substr(0, in_idx))
+                src_path = str.Trim(rest.substr(in_idx + 4, rest.len() - in_idx - 4))
+            end
+            pos = tend
+            mut body_ended := ""
+            body := parse_nodes(t, pos, body_ended)
+            mut node := Node { kind = NodeEach }
+            node.path = src_path
+            node.loop_var = loop_var
+            node.body = body
+            nodes.push(node)
+            continue
+        end
+
+        if str.StartsWith(tag, "&"):
+            mut node := Node { kind = NodeRaw }
+            node.path = str.Trim(tag.substr(1, tag.len() - 1))
+            nodes.push(node)
+            pos = tend
+            continue
+        end
+
+        mut node := Node { kind = NodeVar }
+        node.path = tag
+        nodes.push(node)
+        pos = tend
+    end
+    ended = ""
+    ret nodes
+end
+
+func lookup(root: value.Value, scopes: Vector<Frame>, path: str): value.Value:
+    parts := str.Split(path, ".")
+    defer parts.free()
+    if parts.len() == 0: ret value.Value {} end
+    first := parts.get(0)
+
+    mut base := value.Value {}
+    mut found := false
+    mut i := scopes.len() - 1
+    while i >= 0:
+        f := scopes.get(i)
+        if f.name == first:
+            base = f.val
+            found = true
+            i = 0 - 1
+        else:
+            i -= 1
+        end
+    end
+
+    mut start_idx := 1
+    if !found:
+        base = root
+        start_idx = 0
+    end
+
+    mut cur := base
+    mut j := start_idx
+    while j < parts.len():
+        if !value.IsObject(cur): ret value.Value {} end
+        mut ok := false
+        cur = value.ObjectGetOk(cur, parts.get(j), ok)
+        if !ok: ret value.Value {} end
+        j += 1
+    end
+    ret cur
+end
+
+func truthy(v: value.Value): bool:
+    if value.IsBool(v): ret value.AsBool(v) end
+    if value.IsString(v): ret value.AsString(v) != "" end
+    if value.IsInt(v): ret value.AsInt(v) != 0 end
+    if value.IsFloat(v): ret value.AsFloat(v) != 0.0 end
+    if value.IsArray(v): ret value.ArrayLen(v) > 0 end
+    if value.IsObject(v): ret value.ObjectLen(v) > 0 end
+    ret false
+end
+
+func to_str(v: value.Value): str:
+    if value.IsString(v): ret value.AsString(v) end
+    if value.IsBool(v):
+        if value.AsBool(v): ret "true" end
+        ret "false"
+    end
+    if value.IsInt(v): ret conv.FormatInt(value.AsInt(v)) end
+    if value.IsFloat(v): ret conv.FormatFloat(value.AsFloat(v)) end
+    ret ""
+end
+
+func render_nodes(nodes: Vector<Node>, root: value.Value, scopes &: Vector<Frame>, out &: str.StringBuilder):
+    repeat nodes.len() with i:
+        node := nodes.get(i)
+        if node.kind == NodeText:
+            str.BufAppend(out, node.text)
+        else node.kind == NodeVar:
+            v := lookup(root, scopes, node.path)
+            str.BufAppend(out, esc.EscapeHtml(to_str(v)))
+        else node.kind == NodeRaw:
+            v := lookup(root, scopes, node.path)
+            str.BufAppend(out, to_str(v))
+        else node.kind == NodeIf:
+            v := lookup(root, scopes, node.path)
+            mut cond := truthy(v)
+            if node.negate: cond = !cond end
+            if cond:
+                render_nodes(node.body, root, scopes, out)
+            else:
+                render_nodes(node.else_body, root, scopes, out)
+            end
+        else node.kind == NodeEach:
+            v := lookup(root, scopes, node.path)
+            if value.IsArray(v):
+                mut frame := Frame { name = node.loop_var }
+                repeat value.ArrayLen(v) with idx:
+                    frame.val = value.ArrayGet(v, idx)
+                    scopes.push(frame)
+                    render_nodes(node.body, root, scopes, out)
+                    _dropped := scopes.pop()
+                end
+            end
+        end
+    end
+end
+
+pub func Parse(t: str): Vector<Node>:
+    mut pos := 0
+    mut ended := ""
+    ret parse_nodes(t, pos, ended)
+end
+
+pub func Render(t: str, root: value.Value): str:
+    nodes := Parse(t)
+    mut scopes := Vector {} as Vector<Frame>
+    defer scopes.free()
+    mut out := str.NewBuilder()
+    defer str.BufFree(out)
+    render_nodes(nodes, root, scopes, out)
+    ret str.BufStr(out)
+end
