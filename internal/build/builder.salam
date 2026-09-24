@@ -60,6 +60,17 @@ func posts_only(pages: Vector<p.Page>): Vector<p.Page>:
     ret out
 end
 
+func filter_by_lang(items: Vector<p.Page>, lang: str): Vector<p.Page>:
+    mut out := Vector {} as Vector<p.Page>
+    repeat items.len() with i:
+        item := items.get(i)
+        if item.lang == lang:
+            out.push(item)
+        end
+    end
+    ret out
+end
+
 func page_summary(page: p.Page): value.Value:
     mut v := value.ValueClone(page.front)
     value.ObjectSet(v, "url", value.ValueString(page.route))
@@ -74,14 +85,19 @@ func pages_value(pages: Vector<p.Page>): value.Value:
     ret arr
 end
 
-func render_page(site: config.Site, page: p.Page, all_val: value.Value, posts_val: value.Value, data_val: value.Value): str:
+func render_page(site: config.Site, page: p.Page, pages: Vector<p.Page>, posts: Vector<p.Page>, data_val: value.Value): str:
     lang := effective_lang(site, page)
+    scoped_pages := filter_by_lang(pages, page.lang)
+    defer scoped_pages.free()
+    scoped_posts := filter_by_lang(posts, page.lang)
+    defer scoped_posts.free()
+
     mut root := value.ValueClone(page.front)
     value.ObjectSet(root, "content", value.ValueString(page.content_html))
     value.ObjectSet(root, "url", value.ValueString(page.route))
     value.ObjectSet(root, "site", site.data)
-    value.ObjectSet(root, "pages", all_val)
-    value.ObjectSet(root, "posts", posts_val)
+    value.ObjectSet(root, "pages", pages_value(scoped_pages))
+    value.ObjectSet(root, "posts", pages_value(scoped_posts))
     value.ObjectSet(root, "data", data_val)
     value.ObjectSet(root, "lang", value.ValueString(lang))
     value.ObjectSet(root, "dir", value.ValueString(text_dir(lang)))
@@ -89,8 +105,8 @@ func render_page(site: config.Site, page: p.Page, all_val: value.Value, posts_va
     ret tmpl.Render(tpl_text, root)
 end
 
-func write_page(site: config.Site, page: p.Page, all_val: value.Value, posts_val: value.Value, data_val: value.Value, do_minify: bool):
-    mut html := render_page(site, page, all_val, posts_val, data_val)
+func write_page(site: config.Site, page: p.Page, pages: Vector<p.Page>, posts: Vector<p.Page>, data_val: value.Value, do_minify: bool):
+    mut html := render_page(site, page, pages, posts, data_val)
     if do_minify: html = minify.Html(html) end
     dir := site.output + page.route
     os.MkdirAll(dir)
@@ -119,14 +135,20 @@ func page_num_route(base_route: str, page_num: int): str:
     ret base_route + "page/" + conv.FormatInt(page_num as i64) + "/"
 end
 
-func write_paginated(site: config.Site, page: p.Page, posts: Vector<p.Page>, all_val: value.Value, data_val: value.Value, do_minify: bool):
+func write_paginated(site: config.Site, page: p.Page, pages: Vector<p.Page>, posts: Vector<p.Page>, data_val: value.Value, do_minify: bool):
+    scoped_pages := filter_by_lang(pages, page.lang)
+    defer scoped_pages.free()
+    scoped_posts := filter_by_lang(posts, page.lang)
+    defer scoped_posts.free()
+    all_val := pages_value(scoped_pages)
+
     size := site.pagination_size
-    mut total_pages := ceil_div(posts.len(), size)
+    mut total_pages := ceil_div(scoped_posts.len(), size)
     if total_pages < 1: total_pages = 1 end
 
     repeat total_pages with idx:
         page_num := idx + 1
-        slice_val := posts_slice_value(posts, idx * size, size)
+        slice_val := posts_slice_value(scoped_posts, idx * size, size)
         route := page_num_route(page.route, page_num)
 
         lang := effective_lang(site, page)
@@ -230,13 +252,13 @@ pub func Run(args: Vector<str>):
     os.MkdirAll(site.output)
 
     repeat pages.len() with i:
-        write_page(site, pages.get(i), all_val, posts_val, data_val, do_minify)
+        write_page(site, pages.get(i), pages, posts, data_val, do_minify)
     end
 
     repeat pages.len() with i:
         page := pages.get(i)
         if p.BoolField(page.front, "paginate", false):
-            write_paginated(site, page, posts, all_val, data_val, do_minify)
+            write_paginated(site, page, pages, posts, data_val, do_minify)
         end
     end
 
