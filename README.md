@@ -25,6 +25,10 @@ neyx build
 neyx preview
 ```
 
+See [projects/](projects/) for five complete example sites (a personal
+site, a blog, a blog in three languages, a docs site, and a themed
+landing page) — each is a real project you can `cd` into and build.
+
 ## Commands
 
 | Command | Description |
