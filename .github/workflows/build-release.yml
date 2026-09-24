@@ -170,7 +170,11 @@ jobs:
         run: |
           set -eu
           cd dist-pkg
-          zip -r "../${ARCHIVE_BASE}.zip" .
+          if command -v zip >/dev/null 2>&1; then
+            zip -r "../${ARCHIVE_BASE}.zip" .
+          else
+            powershell -NoProfile -Command "Compress-Archive -Path * -DestinationPath '../${ARCHIVE_BASE}.zip'"
+          fi
           tar czf "../${ARCHIVE_BASE}.tar.gz" .
           if command -v 7z >/dev/null 2>&1; then
             7z a "../${ARCHIVE_BASE}.7z" . >/dev/null
