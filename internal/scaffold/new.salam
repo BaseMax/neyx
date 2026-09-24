@@ -10,13 +10,22 @@ const CONFIG_TPL := "title: \"My Site\"\ndescription: \"A new Neyx site\"\nurl: 
 
 const INDEX_TPL := "---\ntitle: \"Home\"\ndescription: \"Welcome to my new Neyx site\"\n---\n\n# Welcome to Neyx\n\nThis is your new site. Edit `content/index.md` to get started.\n"
 
-const LAYOUT_TPL := "<!doctype html>\n<html lang=\"{{ lang }}\" dir=\"{{ dir }}\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>{{ title }} - {{ site.title }}</title>\n{{ if description }}<meta name=\"description\" content=\"{{ description }}\">{{ end }}\n{{ if noindex }}<meta name=\"robots\" content=\"noindex\">{{ end }}\n<link rel=\"canonical\" href=\"{{ site.url }}{{ url }}\">\n{{ each t in translations }}<link rel=\"alternate\" hreflang=\"{{ t.lang }}\" href=\"{{ site.url }}{{ t.url }}\">{{ end }}\n<meta property=\"og:title\" content=\"{{ title }}\">\n{{ if description }}<meta property=\"og:description\" content=\"{{ description }}\">{{ end }}\n<meta property=\"og:url\" content=\"{{ site.url }}{{ url }}\">\n<meta property=\"og:type\" content=\"website\">\n<meta name=\"twitter:card\" content=\"summary\">\n</head>\n<body>\n<main>\n{{ & content }}\n</main>\n</body>\n</html>\n"
+const LAYOUT_TPL := "<!doctype html>\n<html lang=\"{{ lang }}\" dir=\"{{ dir }}\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>{{ title }} - {{ site.title }}</title>\n{{ if description }}<meta name=\"description\" content=\"{{ description }}\">{{ end }}\n{{ if noindex }}<meta name=\"robots\" content=\"noindex\">{{ end }}\n<link rel=\"canonical\" href=\"{{ site.url }}{{ url }}\">\n<link rel=\"icon\" href=\"/assets/favicon.ico\" sizes=\"any\">\n<link rel=\"icon\" type=\"image/png\" href=\"/assets/favicon-dark.png\" media=\"(prefers-color-scheme: light)\">\n<link rel=\"icon\" type=\"image/png\" href=\"/assets/favicon-light.png\" media=\"(prefers-color-scheme: dark)\">\n<link rel=\"apple-touch-icon\" href=\"/assets/apple-touch-icon.png\">\n{{ each t in translations }}<link rel=\"alternate\" hreflang=\"{{ t.lang }}\" href=\"{{ site.url }}{{ t.url }}\">{{ end }}\n<meta property=\"og:title\" content=\"{{ title }}\">\n{{ if description }}<meta property=\"og:description\" content=\"{{ description }}\">{{ end }}\n<meta property=\"og:url\" content=\"{{ site.url }}{{ url }}\">\n<meta property=\"og:type\" content=\"website\">\n<meta name=\"twitter:card\" content=\"summary\">\n</head>\n<body>\n<main>\n{{ & content }}\n</main>\n</body>\n</html>\n"
 
 const GITIGNORE_TPL := "/dist\n"
+
+const FAVICON_ASSET_DIR := "internal/scaffold/assets"
 
 func join(dir: str, rest: str): str:
     if dir == "": ret rest end
     ret dir + "/" + rest
+end
+
+func copy_default_favicon(dir: str, name: str):
+    src := FAVICON_ASSET_DIR + "/" + name
+    if os.Exists(src):
+        os.Copy(src, join(dir, "assets/" + name))
+    end
 end
 
 func scaffold_into(dir: str):
@@ -28,6 +37,11 @@ func scaffold_into(dir: str):
     io.WriteFile(join(dir, "content/index.md"), INDEX_TPL)
     io.WriteFile(join(dir, "layouts/default.html"), LAYOUT_TPL)
     io.WriteFile(join(dir, ".gitignore"), GITIGNORE_TPL)
+
+    copy_default_favicon(dir, "favicon.ico")
+    copy_default_favicon(dir, "favicon-light.png")
+    copy_default_favicon(dir, "favicon-dark.png")
+    copy_default_favicon(dir, "apple-touch-icon.png")
 end
 
 func run_post(args: Vector<str>):
@@ -78,6 +92,7 @@ pub func Run(args: Vector<str>):
     println "  " + name + "/content/index.md"
     println "  " + name + "/layouts/default.html"
     println "  " + name + "/.gitignore"
+    println "  " + name + "/assets/favicon.ico"
     println ""
     println "Next steps:"
     println "  cd " + name
