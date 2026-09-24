@@ -105,13 +105,13 @@ func render_page(site: config.Site, page: p.Page, pages: Vector<p.Page>, posts: 
     ret tmpl.Render(tpl_text, root)
 end
 
-func write_page(site: config.Site, page: p.Page, pages: Vector<p.Page>, posts: Vector<p.Page>, data_val: value.Value, do_minify: bool):
+func write_page(site: config.Site, page: p.Page, pages: Vector<p.Page>, posts: Vector<p.Page>, data_val: value.Value, do_minify: bool, quiet: bool):
     mut html := render_page(site, page, pages, posts, data_val)
     if do_minify: html = minify.Html(html) end
     dir := site.output + page.route
     os.MkdirAll(dir)
     io.WriteFile(dir + "index.html", html)
-    println "  wrote", dir + "index.html"
+    if !quiet: println "  wrote", dir + "index.html" end
 end
 
 func ceil_div(a: int, b: int): int:
@@ -135,7 +135,7 @@ func page_num_route(base_route: str, page_num: int): str:
     ret base_route + "page/" + conv.FormatInt(page_num as i64) + "/"
 end
 
-func write_paginated(site: config.Site, page: p.Page, pages: Vector<p.Page>, posts: Vector<p.Page>, data_val: value.Value, do_minify: bool):
+func write_paginated(site: config.Site, page: p.Page, pages: Vector<p.Page>, posts: Vector<p.Page>, data_val: value.Value, do_minify: bool, quiet: bool):
     scoped_pages := filter_by_lang(pages, page.lang)
     defer scoped_pages.free()
     scoped_posts := filter_by_lang(posts, page.lang)
@@ -178,7 +178,7 @@ func write_paginated(site: config.Site, page: p.Page, pages: Vector<p.Page>, pos
         dir := site.output + route
         os.MkdirAll(dir)
         io.WriteFile(dir + "index.html", html)
-        println "  wrote", dir + "index.html"
+        if !quiet: println "  wrote", dir + "index.html" end
     end
 end
 
@@ -210,13 +210,13 @@ func search_index_value(pages: Vector<p.Page>): value.Value:
     ret arr
 end
 
-func write_robots(site: config.Site):
+func write_robots(site: config.Site, quiet: bool):
     mut text := "User-agent: *\nAllow: /\n"
     if site.url != "":
         text = text + "\nSitemap: " + site.url + "/sitemap.xml\n"
     end
     io.WriteFile(site.output + "/robots.txt", text)
-    println "  wrote", site.output + "/robots.txt"
+    if !quiet: println "  wrote", site.output + "/robots.txt" end
 end
 
 pub func Run(args: Vector<str>):
@@ -225,9 +225,11 @@ pub func Run(args: Vector<str>):
     mut fs := flag.New("neyx build", "Build the site for production")
     flag.AddBool(fs, "drafts", "", false, "Include draft content")
     flag.AddBool(fs, "pretty", "", false, "Skip HTML/XML minification")
+    flag.AddBool(fs, "json", "", false, "Print a JSON build summary instead of human output")
     flag.Parse(fs, args)
     include_drafts := flag.GetBool(fs, "drafts")
     do_minify := !flag.GetBool(fs, "pretty")
+    quiet := flag.GetBool(fs, "json")
 
     site := config.Load("neyx.config.yml")
 
@@ -252,13 +254,13 @@ pub func Run(args: Vector<str>):
     os.MkdirAll(site.output)
 
     repeat pages.len() with i:
-        write_page(site, pages.get(i), pages, posts, data_val, do_minify)
+        write_page(site, pages.get(i), pages, posts, data_val, do_minify, quiet)
     end
 
     repeat pages.len() with i:
         page := pages.get(i)
         if p.BoolField(page.front, "paginate", false):
-            write_paginated(site, page, pages, posts, data_val, do_minify)
+            write_paginated(site, page, pages, posts, data_val, do_minify, quiet)
         end
     end
 
@@ -271,31 +273,35 @@ pub func Run(args: Vector<str>):
     mut sitemap_xml := sitemap.Build(site, pages)
     if do_minify: sitemap_xml = minify.Xml(sitemap_xml) end
     io.WriteFile(site.output + "/sitemap.xml", sitemap_xml)
-    println "  wrote", site.output + "/sitemap.xml"
+    if !quiet: println "  wrote", site.output + "/sitemap.xml" end
 
     mut feed_xml := feed.Build(site, posts)
     if do_minify: feed_xml = minify.Xml(feed_xml) end
     io.WriteFile(site.output + "/feed.xml", feed_xml)
-    println "  wrote", site.output + "/feed.xml"
+    if !quiet: println "  wrote", site.output + "/feed.xml" end
 
-    write_robots(site)
+    write_robots(site, quiet)
 
     os.MkdirAll(site.output + "/api")
     io.WriteFile(site.output + "/api/pages.json", json.EncodeDefault(all_val))
-    println "  wrote", site.output + "/api/pages.json"
+    if !quiet: println "  wrote", site.output + "/api/pages.json" end
 
     io.WriteFile(site.output + "/api/posts.json", json.EncodeDefault(posts_val))
-    println "  wrote", site.output + "/api/posts.json"
+    if !quiet: println "  wrote", site.output + "/api/posts.json" end
 
     search_val := search_index_value(pages)
     io.WriteFile(site.output + "/search-index.json", json.EncodeDefault(search_val))
-    println "  wrote", site.output + "/search-index.json"
+    if !quiet: println "  wrote", site.output + "/search-index.json" end
 
     if os.IsDir(site.static_dir):
         os.CopyTree(site.static_dir, site.output)
     end
 
     elapsed_ms := time.SinceMs(start_ns)
-    println ""
-    println "Built", pages.len(), "page(s) into", site.output, "in", conv.FormatFloatPrec(elapsed_ms, 2), "ms"
+    if quiet:
+        println "{\"pages\": " + conv.FormatInt(pages.len() as i64) + ", \"output\": \"" + site.output + "\", \"minified\": " + (do_minify ? "true" : "false") + ", \"drafts\": " + (include_drafts ? "true" : "false") + ", \"elapsed_ms\": " + conv.FormatFloatPrec(elapsed_ms, 2) + "}"
+    else:
+        println ""
+        println "Built", pages.len(), "page(s) into", site.output, "in", conv.FormatFloatPrec(elapsed_ms, 2), "ms"
+    end
 end
