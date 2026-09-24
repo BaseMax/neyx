@@ -46,6 +46,18 @@ pub func InlineHtml(text: str): str:
                 str.BufAppend(sb, "</em>")
                 i = close + 1
             end
+        else c == "~" && i + 1 < n && text.substr(i + 1, 1) == "~":
+            close := str.IndexFrom(text, "~~", i + 2)
+            if close < 0:
+                str.BufAppend(sb, "~~")
+                i += 2
+            else:
+                inner := text.substr(i + 2, close - i - 2)
+                str.BufAppend(sb, "<del>")
+                str.BufAppend(sb, esc.EscapeHtml(inner))
+                str.BufAppend(sb, "</del>")
+                i = close + 2
+            end
         else c == "!" && i + 1 < n && text.substr(i + 1, 1) == "[":
             close_bracket := str.IndexFrom(text, "]", i + 2)
             mut handled := false

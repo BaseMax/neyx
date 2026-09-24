@@ -4,6 +4,26 @@ import str
 import esc "escape.salam"
 import inl "inline.salam"
 
+func render_list_item(sb &: str.StringBuilder, item: str):
+    if str.StartsWith(item, "[ ] "):
+        rest := item.substr(4, item.len() - 4)
+        str.BufAppend(sb, "  <li class=\"task-item\"><input type=\"checkbox\" disabled> ")
+        str.BufAppend(sb, inl.InlineHtml(rest))
+        str.BufAppend(sb, "</li>\n")
+        ret
+    end
+    if str.StartsWith(item, "[x] ") || str.StartsWith(item, "[X] "):
+        rest := item.substr(4, item.len() - 4)
+        str.BufAppend(sb, "  <li class=\"task-item\"><input type=\"checkbox\" checked disabled> ")
+        str.BufAppend(sb, inl.InlineHtml(rest))
+        str.BufAppend(sb, "</li>\n")
+        ret
+    end
+    str.BufAppend(sb, "  <li>")
+    str.BufAppend(sb, inl.InlineHtml(item))
+    str.BufAppend(sb, "</li>\n")
+end
+
 pub func IsAllDigits(s: str): bool:
     n := s.len()
     if n == 0: ret false end
@@ -55,9 +75,7 @@ pub func FlushOpenBlock(sb &: str.StringBuilder, para_lines &: Vector<str>, list
         str.BufAppend(sb, tag)
         str.BufAppend(sb, ">\n")
         repeat list_items.len() with i:
-            str.BufAppend(sb, "  <li>")
-            str.BufAppend(sb, inl.InlineHtml(list_items.get(i)))
-            str.BufAppend(sb, "</li>\n")
+            render_list_item(sb, list_items.get(i))
         end
         str.BufAppend(sb, "</")
         str.BufAppend(sb, tag)
