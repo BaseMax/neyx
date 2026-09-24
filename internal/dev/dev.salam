@@ -39,45 +39,36 @@ func unix_script(watch: str, stamp: str, script_path: str, build_cmd: str, outpu
     ret script
 end
 
-func powershell_list(parts: Vector<str>): str:
-    mut b := str.NewBuilder()
-    defer str.BufFree(b)
-    str.BufAppend(b, "@(")
-    repeat parts.len() with i:
-        if i > 0: str.BufAppend(b, ",") end
-        str.BufAppend(b, "\"")
-        str.BufAppend(b, parts.get(i))
-        str.BufAppend(b, "\"")
-    end
-    str.BufAppend(b, ")")
-    ret str.BufStr(b)
+func windows_watcher_script(): str:
+    mut script := ""
+    script = script + "param($stampFile, $dirsArg, $cmd)\n"
+    script = script + "$dirs = $dirsArg -split ';'\n"
+    script = script + "while ($true) {\n"
+    script = script + "  $stamp = (Get-Item $stampFile).LastWriteTime\n"
+    script = script + "  $changed = Get-ChildItem -Path $dirs -Recurse -File -ErrorAction SilentlyContinue | Where-Object { $_.LastWriteTime -gt $stamp }\n"
+    script = script + "  if ($changed) {\n"
+    script = script + "    Get-Date | Out-File -FilePath $stampFile\n"
+    script = script + "    Write-Host \"\"\n"
+    script = script + "    Write-Host \"Change detected, rebuilding...\"\n"
+    script = script + "    Invoke-Expression $cmd\n"
+    script = script + "  }\n"
+    script = script + "  Start-Sleep -Seconds 1\n"
+    script = script + "}\n"
+    ret script
 end
 
-func windows_script(watch_list: Vector<str>, stamp: str, script_path: str, build_cmd: str, output: str, port: str): str:
-    dirs := powershell_list(watch_list)
+func windows_script(watch_list: Vector<str>, stamp: str, script_path: str, watch_script_path: str, build_cmd: str, output: str, port: str): str:
+    dirs := str.Join(watch_list, ";")
     mut script := ""
-    script = script + "$ErrorActionPreference = 'SilentlyContinue'\n"
     script = script + "Get-Date | Out-File -FilePath '" + stamp + "'\n"
-    script = script + "$job = Start-Job -ScriptBlock {\n"
-    script = script + "  param($stampFile, $dirs, $cmd)\n"
-    script = script + "  while ($true) {\n"
-    script = script + "    $stamp = (Get-Item $stampFile).LastWriteTime\n"
-    script = script + "    $changed = Get-ChildItem -Path $dirs -Recurse -File -ErrorAction SilentlyContinue | Where-Object { $_.LastWriteTime -gt $stamp }\n"
-    script = script + "    if ($changed) {\n"
-    script = script + "      Get-Date | Out-File -FilePath $stampFile\n"
-    script = script + "      Write-Host \"\"\n"
-    script = script + "      Write-Host \"Change detected, rebuilding...\"\n"
-    script = script + "      Invoke-Expression $cmd\n"
-    script = script + "    }\n"
-    script = script + "    Start-Sleep -Seconds 1\n"
-    script = script + "  }\n"
-    script = script + "} -ArgumentList '" + stamp + "', " + dirs + ", '" + build_cmd + "'\n"
+    script = script + "$watchArgs = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', '" + watch_script_path + "', '" + stamp + "', '" + dirs + "', '" + build_cmd + "')\n"
+    script = script + "$watchProc = Start-Process -FilePath 'powershell' -ArgumentList $watchArgs -WindowStyle Hidden -PassThru\n"
     script = script + "try {\n"
     script = script + "  salam serve " + output + " --port=" + port + "\n"
     script = script + "} finally {\n"
-    script = script + "  Stop-Job $job -ErrorAction SilentlyContinue\n"
-    script = script + "  Remove-Job $job -ErrorAction SilentlyContinue\n"
+    script = script + "  Stop-Process -Id $watchProc.Id -Force -ErrorAction SilentlyContinue\n"
     script = script + "  Remove-Item '" + stamp + "' -ErrorAction SilentlyContinue\n"
+    script = script + "  Remove-Item '" + watch_script_path + "' -ErrorAction SilentlyContinue\n"
     script = script + "  Remove-Item '" + script_path + "' -ErrorAction SilentlyContinue\n"
     script = script + "}\n"
     ret script
@@ -132,7 +123,9 @@ pub func Run(args: Vector<str>):
     if SALAM_OS_WINDOWS:
         stamp := tmp + "\\neyx-dev-stamp-" + pid + ".txt"
         script_path := tmp + "\\neyx-dev-" + pid + ".ps1"
-        script := windows_script(watch_list, stamp, script_path, build_cmd, site.output, port)
+        watch_script_path := tmp + "\\neyx-dev-watch-" + pid + ".ps1"
+        os.WriteFile(watch_script_path, windows_watcher_script())
+        script := windows_script(watch_list, stamp, script_path, watch_script_path, build_cmd, site.output, port)
         os.WriteFile(script_path, script)
         os.Run("powershell -NoProfile -ExecutionPolicy Bypass -File \"" + script_path + "\"")
     else:
