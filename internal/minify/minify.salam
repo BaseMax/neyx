@@ -2,17 +2,6 @@ package minify
 
 import str
 
-func is_whitespace_only(s: str): bool:
-    n := s.len()
-    mut i := 0
-    while i < n:
-        c := s.substr(i, 1)
-        if c != " " && c != "\t" && c != "\n" && c != "\r": ret false end
-        i += 1
-    end
-    ret true
-end
-
 func collapse_whitespace(s: str): str:
     mut sb := str.NewBuilder()
     defer str.BufFree(sb)
@@ -122,9 +111,7 @@ pub func Markup(src_text: str, preserve: Vector<str>): str:
         mut text_end := str.IndexFrom(src_text, "<", i)
         if text_end < 0: text_end = n end
         text_node := src_text.substr(i, text_end - i)
-        if !is_whitespace_only(text_node):
-            str.BufAppend(out, collapse_whitespace(text_node))
-        end
+        str.BufAppend(out, collapse_whitespace(text_node))
         i = text_end
     end
     ret str.BufStr(out)
