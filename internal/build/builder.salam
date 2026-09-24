@@ -154,7 +154,9 @@ func write_paginated(site: config.Site, page: p.Page, pages: Vector<p.Page>, pos
     defer scoped_posts.free()
     all_val := pages_value(scoped_pages)
 
-    size := site.pagination_size
+    mut size := site.pagination_size
+    if size <= 0: size = scoped_posts.len() end
+    if size <= 0: size = 1 end
     mut total_pages := ceil_div(scoped_posts.len(), size)
     if total_pages < 1: total_pages = 1 end
 
