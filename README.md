@@ -158,9 +158,10 @@ Welcome to my site.
 - `{{ each item in path }} ... {{ end }}` — loop over an array.
 
 Every page's front matter fields are available at the top level (`{{ title }}`),
-alongside `content` (the rendered body), `url` (the page's route), `site.*`
-(config), `data.*` (data files), `pages` (every page), and `posts` (every page
-with a `date`, newest first).
+alongside `content` (the rendered body), `toc` (an `<li>` per `##` heading,
+for `{{ & toc }}` inside your own `<ul>`/`<nav>`), `url` (the page's route),
+`site.*` (config), `data.*` (data files), `pages` (every page), and `posts`
+(every page with a `date`, newest first).
 
 ## Generated output
 
