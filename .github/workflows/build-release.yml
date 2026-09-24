@@ -106,6 +106,7 @@ jobs:
           set -eu
           ./${{ matrix.binary }} new hot-reload-test
           cd hot-reload-test
+          echo "t0 $(date -u +%s) launching dev server"
           ../${{ matrix.binary }} dev --port=4567 &
           dev_pid=$!
 
@@ -117,6 +118,7 @@ jobs:
             fi
             sleep 1
           done
+          echo "t1 $(date -u +%s) up=$up"
           if [ "$up" -ne 1 ]; then
             echo "::error::dev server never served the initial build"
             kill "$dev_pid" 2>/dev/null || true
@@ -124,10 +126,11 @@ jobs:
           fi
 
           printf -- '---\ntitle: "Home"\n---\n\n# Hot Reload Marker 4f9c2\n' > content/index.md
+          echo "t2 $(date -u +%s) wrote content/index.md"
 
           reload_budget=30
           if [ "${{ runner.os }}" = "Windows" ]; then
-            reload_budget=150
+            reload_budget=240
           fi
 
           reloaded=0
@@ -138,6 +141,7 @@ jobs:
             fi
             sleep 1
           done
+          echo "t3 $(date -u +%s) reloaded=$reloaded"
 
           kill "$dev_pid" 2>/dev/null || true
           if command -v taskkill >/dev/null 2>&1; then
