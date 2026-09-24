@@ -1,6 +1,7 @@
 package mdblocks
 
 import str
+import encoding
 import esc "escape.salam"
 import inl "inline.salam"
 
@@ -70,8 +71,9 @@ pub func Slugify(text: str): str:
         end
         i += 1
     end
-    out := str.BufStr(sb)
-    ret str.TrimSuffix(out, "-")
+    out := str.TrimSuffix(str.BufStr(sb), "-")
+    if out == "": ret encoding.URLEncode(text) end
+    ret out
 end
 
 pub func FlushOpenBlock(sb &: str.StringBuilder, para_lines &: Vector<str>, list_kind &: str, list_items &: Vector<str>, quote_lines &: Vector<str>):
