@@ -1,0 +1,54 @@
+package config
+
+import io
+import os
+import encoding.value
+import encoding.encerr
+import encoding.yaml
+
+pub struct Site:
+    pub title: str = "My Site"
+    pub description: str = ""
+    pub url: str = ""
+    pub language: str = "en"
+    pub output: str = "dist"
+    pub content_dir: str = "content"
+    pub layouts_dir: str = "layouts"
+    pub assets_dir: str = "assets"
+    pub data: value.Value = value.Value {}
+end
+
+func str_field(obj: value.Value, key: str, def: str): str:
+    mut ok := false
+    v := value.ObjectGetOk(obj, key, ok)
+    if !ok || !value.IsString(v): ret def end
+    ret value.AsString(v)
+end
+
+// Load reads neyx.config.yml at path; a missing file or a parse error
+// falls back to the defaults on Site rather than failing the build - a
+// brand new project should still build with nothing but content in it.
+pub func Load(path: str): Site:
+    mut site := Site {}
+    if !os.Exists(path): ret site end
+
+    text := io.ReadFile(path)
+    mut err := encerr.NoError()
+    root := yaml.Decode(text, err)
+    if err.kind != encerr.KindNone:
+        printerrln "neyx: warning: could not parse", path, "-", err.message
+        ret site
+    end
+    if !value.IsObject(root): ret site end
+
+    site.data = root
+    site.title = str_field(root, "title", site.title)
+    site.description = str_field(root, "description", site.description)
+    site.url = str_field(root, "url", site.url)
+    site.language = str_field(root, "language", site.language)
+    site.output = str_field(root, "output", site.output)
+    site.content_dir = str_field(root, "content", site.content_dir)
+    site.layouts_dir = str_field(root, "layouts", site.layouts_dir)
+    site.assets_dir = str_field(root, "assets", site.assets_dir)
+    ret site
+end

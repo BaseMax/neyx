@@ -1,5 +1,8 @@
 package build
 
+import config "../config/config.salam"
+
 pub func Run(_args: Vector<str>):
-    println "neyx build: not implemented yet"
+    site := config.Load("neyx.config.yml")
+    println "building", site.title, "->", site.output
 end
