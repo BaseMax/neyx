@@ -1,18 +1,36 @@
 # Neyx
 
-Neyx is a lightweight, ultra-fast, feature-rich static site generator written entirely in the Salam programming language.
+Neyx is a lightweight, ultra-fast, feature-rich static site generator.
 
 Static sites. Native speed. Written in Salam.
 
-## Requirements
+## Install
 
-- The [Salam](https://github.com/SalamLang/Salam) compiler on your `PATH`.
-
-## Building Neyx
+macOS / Linux:
 
 ```bash
-salam build
+curl -fsSL https://raw.githubusercontent.com/BaseMax/neyx/main/install.sh | sh
 ```
+
+Windows (PowerShell):
+
+```powershell
+irm https://raw.githubusercontent.com/BaseMax/neyx/main/install.ps1 | iex
+```
+
+Windows (Command Prompt):
+
+```cmd
+curl -fsSL https://raw.githubusercontent.com/BaseMax/neyx/main/install.bat -o install.bat && install.bat
+```
+
+Each script downloads the right binary for your platform from the
+[latest release](https://github.com/BaseMax/neyx/releases/latest) and puts
+`neyx` on your `PATH`. Prefer to pick the file yourself? Grab it from the
+[releases page](https://github.com/BaseMax/neyx/releases/latest) or the
+download buttons on [basemax.github.io/neyx](https://basemax.github.io/neyx/).
+
+Want to build Neyx yourself instead? See [BUILD-SOURCE.md](BUILD-SOURCE.md).
 
 ## Usage
 
@@ -27,7 +45,7 @@ neyx preview
 
 See [projects/](projects/) for five complete example sites (a personal
 site, a blog, a blog in three languages, a docs site, and a themed
-landing page) — each is a real project you can `cd` into and build.
+landing page), each is a real project you can `cd` into and build.
 
 ## Commands
 
@@ -102,7 +120,7 @@ Every key is also available in templates under `{{ site.* }}`.
 Set `theme` to a name and add `themes/<name>/layouts/` and
 `themes/<name>/assets/`. A layout or asset in the project's own `layouts/`
 or `assets/` always wins, so a site only needs to override the files it
-wants to change — everything else falls through to the theme, then to
+wants to change - everything else falls through to the theme, then to
 Neyx's built-in default layout.
 
 ### Hooks
@@ -117,7 +135,7 @@ Set `languages` to a list of codes and split `content/` into one directory
 per language (`content/en/...`, `content/fa/...`). Routes get the language
 prefix (`content/fa/about.md` → `/fa/about/`), and every template gets
 `{{ lang }}` (the page's language) and `{{ dir }}` (`rtl` for `fa`/`ar`/`he`/`ur`,
-`ltr` otherwise) — the built-in layout already uses them:
+`ltr` otherwise), the built-in layout already uses them:
 `<html lang="{{ lang }}" dir="{{ dir }}">`. Without `languages` configured,
 sites build exactly as before (single language, no prefix). `pages`/`posts`
 are scoped to each page's own language automatically.
@@ -132,7 +150,7 @@ in front matter to link pages whose filenames don't match.
 ### Taxonomies
 
 `taxonomies` (default `["tags"]`) lists which front-matter array fields
-become browsable term collections — `tags: [...]` and `categories: [...]`
+become browsable term collections - `tags: [...]` and `categories: [...]`
 both work the same way. Each configured field gets `/<field>/<term>/` pages
 (a `{{ each item in items }}` list) and a `/<field>/` index
 (`{{ each t in terms }}`, each with `.name`/`.url`/`.count`). Terms are
@@ -178,10 +196,10 @@ Welcome to my site.
 </ul>
 ```
 
-- `{{ path.to.value }}` — HTML-escaped output.
-- `{{ & path }}` — raw, unescaped output (used for rendered page content).
-- `{{ if path }} ... {{ else }} ... {{ end }}` — truthy conditional.
-- `{{ each item in path }} ... {{ end }}` — loop over an array.
+- `{{ path.to.value }}`: HTML-escaped output.
+- `{{ & path }}`: raw, unescaped output (used for rendered page content).
+- `{{ if path }} ... {{ else }} ... {{ end }}`: truthy conditional.
+- `{{ each item in path }} ... {{ end }}`: loop over an array.
 
 Every page's front matter fields are available at the top level (`{{ title }}`),
 alongside `content` (the rendered body), `toc` (an `<li>` per `##` heading,
@@ -210,16 +228,7 @@ the built-in layout).
 ```
 
 It fetches `/search-index.json` once and filters by title/description as
-the user types — no server or build step required.
-
-## CI and releases
-
-Every push builds and smoke-tests `neyx` on Linux, macOS, and Windows,
-including a live hot-reload check (starts `neyx dev`, edits a file, asserts
-the rebuild happened). A push to `main` whose commit message starts with
-`release:` additionally packages each platform binary as `.zip`, `.tar.gz`,
-and `.7z` and publishes them to a GitHub release tagged from the `VERSION`
-constant in `internal/cli/app.salam`. Any other push just builds and tests.
+the user types, no server or build step required.
 
 ## License
 
