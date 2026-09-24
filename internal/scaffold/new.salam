@@ -2,6 +2,9 @@ package scaffold
 
 import os
 import io
+import time
+import config "../config/config.salam"
+import blk "../markdown/blocks.salam"
 
 const CONFIG_TPL := "title: \"My Site\"\ndescription: \"A new Neyx site\"\nurl: \"https://example.com\"\nlanguage: \"en\"\noutput: \"dist\"\n"
 
@@ -9,7 +12,36 @@ const INDEX_TPL := "---\ntitle: \"Home\"\ndescription: \"Welcome to my new Neyx 
 
 const LAYOUT_TPL := "<!doctype html>\n<html lang=\"{{ site.language }}\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>{{ title }} - {{ site.title }}</title>\n{{ if description }}<meta name=\"description\" content=\"{{ description }}\">{{ end }}\n<link rel=\"canonical\" href=\"{{ site.url }}{{ url }}\">\n<meta property=\"og:title\" content=\"{{ title }}\">\n{{ if description }}<meta property=\"og:description\" content=\"{{ description }}\">{{ end }}\n<meta property=\"og:url\" content=\"{{ site.url }}{{ url }}\">\n<meta property=\"og:type\" content=\"website\">\n<meta name=\"twitter:card\" content=\"summary\">\n</head>\n<body>\n<main>\n{{ & content }}\n</main>\n</body>\n</html>\n"
 
+func run_post(args: Vector<str>):
+    if args.len() < 2:
+        printerrln "usage: neyx new post <title>"
+        os.Exit(1)
+    end
+
+    title := args.get(1)
+    site := config.Load("neyx.config.yml")
+    slug := blk.Slugify(title)
+    dir := site.content_dir + "/posts"
+    path := dir + "/" + slug + ".md"
+
+    if os.Exists(path):
+        printerrln "neyx: '" + path + "' already exists"
+        os.Exit(1)
+    end
+
+    os.MkdirAll(dir)
+    today := time.FormatDate(time.Now())
+    text := "---\ntitle: \"" + title + "\"\ndate: \"" + today + "\"\ndraft: false\n---\n\nWrite your post here.\n"
+    io.WriteFile(path, text)
+    println "Created", path
+end
+
 pub func Run(args: Vector<str>):
+    if args.len() > 0 && args.get(0) == "post":
+        run_post(args)
+        ret
+    end
+
     if args.len() == 0:
         printerrln "usage: neyx new <name>"
         os.Exit(1)
