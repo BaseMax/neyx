@@ -19,6 +19,9 @@ pub func Run(_args: Vector<str>):
     if !check("neyx.config.yml present", os.Exists("neyx.config.yml")): all_ok = false end
     if !check("content directory (" + site.content_dir + ")", os.IsDir(site.content_dir)): all_ok = false end
     check("layouts directory (" + site.layouts_dir + ")", os.IsDir(site.layouts_dir))
+    if site.theme != "":
+        if !check("theme '" + site.theme + "' (themes/" + site.theme + ")", os.IsDir("themes/" + site.theme)): all_ok = false end
+    end
     check("git repository", os.IsDir(".git"))
     if !check("salam compiler on PATH", os.Run("salam version --short >/dev/null 2>&1") == 0): all_ok = false end
 
