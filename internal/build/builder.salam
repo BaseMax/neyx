@@ -31,9 +31,18 @@ func effective_lang(site: config.Site, page: p.Page): str:
     ret site.language
 end
 
+func theme_layout_path(site: config.Site, name: str): str:
+    if site.theme == "": ret "" end
+    ret "themes/" + site.theme + "/layouts/" + name + ".html"
+end
+
 func layout_for(site: config.Site, name: str): str:
     path := site.layouts_dir + "/" + name + ".html"
     if os.Exists(path): ret io.ReadFile(path) end
+
+    theme_path := theme_layout_path(site, name)
+    if theme_path != "" && os.Exists(theme_path): ret io.ReadFile(theme_path) end
+
     if name != "default": ret layout_for(site, "default") end
     ret DEFAULT_LAYOUT
 end
@@ -264,6 +273,13 @@ pub func Run(args: Vector<str>):
         page := pages.get(i)
         if p.BoolField(page.front, "paginate", false):
             write_paginated(site, page, pages, posts, data_val, do_minify, quiet)
+        end
+    end
+
+    if site.theme != "":
+        theme_assets := "themes/" + site.theme + "/assets"
+        if os.IsDir(theme_assets):
+            os.CopyTree(theme_assets, site.output + "/assets")
         end
     end
 

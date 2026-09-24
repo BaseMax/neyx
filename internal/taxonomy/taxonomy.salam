@@ -17,6 +17,12 @@ const DEFAULT_TAGS_INDEX_LAYOUT := "<!doctype html><html><head><title>Tags - {{ 
 func layout_or(site: config.Site, name: str, fallback: str): str:
     path := site.layouts_dir + "/" + name + ".html"
     if os.Exists(path): ret io.ReadFile(path) end
+
+    if site.theme != "":
+        theme_path := "themes/" + site.theme + "/layouts/" + name + ".html"
+        if os.Exists(theme_path): ret io.ReadFile(theme_path) end
+    end
+
     ret fallback
 end
 
