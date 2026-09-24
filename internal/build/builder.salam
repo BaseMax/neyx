@@ -4,6 +4,7 @@ import os
 import io
 import str
 import flag
+import conv
 import encoding.value
 import config "../config/config.salam"
 import content "../content/loader.salam"
@@ -80,6 +81,64 @@ func write_page(site: config.Site, page: p.Page, all_val: value.Value, posts_val
     println "  wrote", dir + "index.html"
 end
 
+func ceil_div(a: int, b: int): int:
+    if b <= 0: ret 1 end
+    ret (a + b - 1) / b
+end
+
+func posts_slice_value(posts: Vector<p.Page>, offset: int, count: int): value.Value:
+    mut arr := value.NewValueArray()
+    end_i := offset + count
+    mut i := offset
+    while i < posts.len() && i < end_i:
+        value.ArrayPush(arr, page_summary(posts.get(i)))
+        i += 1
+    end
+    ret arr
+end
+
+func page_num_route(base_route: str, page_num: int): str:
+    if page_num <= 1: ret base_route end
+    ret base_route + "page/" + conv.FormatInt(page_num as i64) + "/"
+end
+
+func write_paginated(site: config.Site, page: p.Page, posts: Vector<p.Page>, all_val: value.Value, data_val: value.Value):
+    size := site.pagination_size
+    mut total_pages := ceil_div(posts.len(), size)
+    if total_pages < 1: total_pages = 1 end
+
+    repeat total_pages with idx:
+        page_num := idx + 1
+        slice_val := posts_slice_value(posts, idx * size, size)
+        route := page_num_route(page.route, page_num)
+
+        mut root := value.ValueClone(page.front)
+        value.ObjectSet(root, "content", value.ValueString(page.content_html))
+        value.ObjectSet(root, "url", value.ValueString(route))
+        value.ObjectSet(root, "site", site.data)
+        value.ObjectSet(root, "pages", all_val)
+        value.ObjectSet(root, "posts", slice_val)
+        value.ObjectSet(root, "data", data_val)
+
+        mut pg := value.NewValueObject()
+        value.ObjectSet(pg, "page", value.ValueInt(page_num as i64))
+        value.ObjectSet(pg, "total_pages", value.ValueInt(total_pages as i64))
+        value.ObjectSet(pg, "has_prev", value.ValueBool(page_num > 1))
+        value.ObjectSet(pg, "has_next", value.ValueBool(page_num < total_pages))
+        value.ObjectSet(pg, "prev_url", value.ValueString(page_num_route(page.route, page_num - 1)))
+        value.ObjectSet(pg, "next_url", value.ValueString(page_num_route(page.route, page_num + 1)))
+        value.ObjectSet(root, "pagination", pg)
+
+        tpl_text := layout_for(site, page.tmpl)
+        html := tmpl.Render(tpl_text, root)
+
+        dir := site.output + route
+        os.MkdirAll(dir)
+        io.WriteFile(dir + "index.html", html)
+        println "  wrote", dir + "index.html"
+    end
+end
+
 func is_draft(page: p.Page): bool:
     ret p.BoolField(page.front, "draft", false)
 end
@@ -134,6 +193,13 @@ pub func Run(args: Vector<str>):
 
     repeat pages.len() with i:
         write_page(site, pages.get(i), all_val, posts_val, data_val)
+    end
+
+    repeat pages.len() with i:
+        page := pages.get(i)
+        if p.BoolField(page.front, "paginate", false):
+            write_paginated(site, page, posts, all_val, data_val)
+        end
     end
 
     if os.IsDir(site.assets_dir):

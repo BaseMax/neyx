@@ -17,6 +17,7 @@ pub struct Site:
     pub assets_dir: str = "assets"
     pub data_dir: str = "data"
     pub static_dir: str = "static"
+    pub pagination_size: int = 10
     pub data: value.Value = value.Value {}
 end
 
@@ -25,6 +26,13 @@ func str_field(obj: value.Value, key: str, def: str): str:
     v := value.ObjectGetOk(obj, key, ok)
     if !ok || !value.IsString(v): ret def end
     ret value.AsString(v)
+end
+
+func int_field(obj: value.Value, key: str, def: int): int:
+    mut ok := false
+    v := value.ObjectGetOk(obj, key, ok)
+    if !ok || !value.IsInt(v): ret def end
+    ret value.AsInt(v) as int
 end
 
 pub func Load(path: str): Site:
@@ -54,6 +62,7 @@ pub func Load(path: str): Site:
     site.assets_dir = str_field(root, "assets", site.assets_dir)
     site.data_dir = str_field(root, "data", site.data_dir)
     site.static_dir = str_field(root, "static", site.static_dir)
+    site.pagination_size = int_field(root, "pagination_size", site.pagination_size)
 
     value.ObjectSet(root, "title", value.ValueString(site.title))
     value.ObjectSet(root, "description", value.ValueString(site.description))
