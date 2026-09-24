@@ -1,0 +1,11 @@
+<header class="site-header">
+{{ if lang }}
+<a class="wordmark" href="/{{ lang }}/">{{ site.title }}</a>
+<nav class="lang-switch">
+<span class="lang-current">{{ lang }}</span>
+{{ each t in translations }}<a href="{{ t.url }}">{{ t.lang }}</a>{{ end }}
+</nav>
+{{ else }}
+<a class="wordmark" href="/{{ site.language }}/">{{ site.title }}</a>
+{{ end }}
+</header>

@@ -106,6 +106,27 @@ h1 {
   font-size: 0.85rem;
 }
 
+.post-tags {
+  margin-top: 2rem;
+}
+
+.tag {
+  display: inline-block;
+  background: var(--card);
+  color: var(--accent);
+  text-decoration: none;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  margin-right: 0.4rem;
+}
+
+.tags-note {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin-top: -0.5rem;
+}
+
 a {
   color: var(--accent);
 }

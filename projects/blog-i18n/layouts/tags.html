@@ -1,18 +1,17 @@
 <!doctype html>
-<html lang="{{ lang }}" dir="{{ dir }}">
+<html lang="{{ site.language }}" dir="ltr">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Tags - {{ site.title }}</title>
 <link rel="canonical" href="{{ site.url }}{{ url }}">
-<link rel="alternate" type="application/rss+xml" href="/feed.xml">
-<link rel="alternate" type="application/atom+xml" href="/atom.xml">
 <link rel="stylesheet" href="/assets/style.css">
 </head>
 <body>
 {{ include "_nav.html" }}
 <main class="page">
 <h1>Tags</h1>
+<p class="tags-note">Tags span all languages; each list mixes posts from every translation.</p>
 <p class="post-tags">
 {{ each t in terms }}<a class="tag" href="{{ t.url }}">{{ t.name }} ({{ t.count }})</a>{{ end }}
 </p>

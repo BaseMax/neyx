@@ -10,21 +10,16 @@
 <link rel="stylesheet" href="/assets/style.css">
 </head>
 <body>
-<header class="site-header">
-<a class="wordmark" href="/{{ lang }}/">{{ site.title }}</a>
-<nav class="lang-switch">
-<span class="lang-current">{{ lang }}</span>
-{{ each t in translations }}<a href="{{ t.url }}">{{ t.lang }}</a>{{ end }}
-</nav>
-</header>
+{{ include "_nav.html" }}
 <main class="page">
 <article>
 <p class="post-meta">{{ date }}</p>
 {{ & content }}
+<p class="post-tags">
+{{ each tag in tags }}<a class="tag" href="/tags/{{ tag | slugify }}/">{{ tag }}</a>{{ end }}
+</p>
 </article>
 </main>
-<footer class="site-footer">
-<p>{{ site.title }} &middot; built with <a href="https://github.com/BaseMax/neyx">NeyX</a></p>
-</footer>
+{{ include "_footer.html" }}
 </body>
 </html>
