@@ -57,18 +57,30 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Cache Salam toolchain
+        id: cache-salam
+        uses: actions/cache@v4
+        with:
+          path: ~/.salam
+          key: ${{ runner.os }}-salam-${{ env.SALAM_VERSION }}
+
       - name: Install Salam (Linux/macOS)
-        if: runner.os != 'Windows'
-        run: |
-          curl -fsSL https://raw.githubusercontent.com/SalamLang/Salam/refs/heads/main/install.sh | sh -s -- --version "$SALAM_VERSION"
-          echo "$HOME/.salam/bin" >> "$GITHUB_PATH"
+        if: runner.os != 'Windows' && steps.cache-salam.outputs.cache-hit != 'true'
+        run: curl -fsSL https://raw.githubusercontent.com/SalamLang/Salam/refs/heads/main/install.sh | sh -s -- --version "$SALAM_VERSION"
 
       - name: Install Salam (Windows)
+        if: runner.os == 'Windows' && steps.cache-salam.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: iex "& { $(irm https://raw.githubusercontent.com/SalamLang/Salam/refs/heads/main/install.ps1) } --version $env:SALAM_VERSION"
+
+      - name: Add Salam to PATH (Linux/macOS)
+        if: runner.os != 'Windows'
+        run: echo "$HOME/.salam/bin" >> "$GITHUB_PATH"
+
+      - name: Add Salam to PATH (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
-        run: |
-          Add-Content -Path $env:GITHUB_PATH -Value "$env:USERPROFILE\.salam\bin"
-          iex "& { $(irm https://raw.githubusercontent.com/SalamLang/Salam/refs/heads/main/install.ps1) } --version $env:SALAM_VERSION"
+        run: Add-Content -Path $env:GITHUB_PATH -Value "$env:USERPROFILE\.salam\bin"
 
       - name: Verify Salam
         run: salam version
