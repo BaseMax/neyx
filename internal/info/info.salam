@@ -1,20 +1,32 @@
 package info
 
+import conv
 import config "../config/config.salam"
 import content "../content/loader.salam"
+import p "../content/page.salam"
 
 const VERSION := "0.1.0"
+
+func count_drafts(pages: Vector<p.Page>): int:
+    mut n := 0
+    repeat pages.len() with i:
+        if p.BoolField(pages.get(i).front, "draft", false): n += 1 end
+    end
+    ret n
+end
 
 pub func Run(_args: Vector<str>):
     site := config.Load("neyx.config.yml")
     pages := content.LoadAll(site.content_dir, site.languages)
     defer pages.free()
+    drafts := count_drafts(pages)
 
     println "Project:  ", site.title
     println "Neyx:     ", VERSION
-    println "Content:  ", pages.len(), "page(s) in", site.content_dir
+    println "Content:  ", pages.len(), "page(s) in", site.content_dir, "(" + conv.FormatInt(drafts as i64) + " draft(s))"
     println "Output:   ", site.output
     println "Layouts:  ", site.layouts_dir
     println "Assets:   ", site.assets_dir
     println "Data:     ", site.data_dir
+    println "Theme:    ", site.theme
 end
