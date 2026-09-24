@@ -208,6 +208,15 @@ the built-in layout).
 It fetches `/search-index.json` once and filters by title/description as
 the user types — no server or build step required.
 
+## CI and releases
+
+Every push builds and smoke-tests `neyx` on Linux, macOS, and Windows,
+including a live hot-reload check (starts `neyx dev`, edits a file, asserts
+the rebuild happened). A push to `main` whose commit message starts with
+`release:` additionally packages each platform binary as `.zip`, `.tar.gz`,
+and `.7z` and publishes them to a GitHub release tagged from the `VERSION`
+constant in `internal/cli/app.salam`. Any other push just builds and tests.
+
 ## License
 
 See [LICENSE](LICENSE).
