@@ -113,8 +113,13 @@ jobs:
 
           printf -- '---\ntitle: "Home"\n---\n\n# Hot Reload Marker 4f9c2\n' > content/index.md
 
+          reload_budget=30
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            reload_budget=150
+          fi
+
           reloaded=0
-          for _ in $(seq 1 60); do
+          for _ in $(seq 1 "$reload_budget"); do
             if curl -sf http://localhost:4567/ 2>/dev/null | grep -q "Hot Reload Marker 4f9c2"; then
               reloaded=1
               break
