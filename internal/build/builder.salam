@@ -17,9 +17,10 @@ import taxonomy "../taxonomy/taxonomy.salam"
 import data "../data/data.salam"
 import minify "../minify/minify.salam"
 import imagepipe "../imagepipe/imagepipe.salam"
+import search "../search/search.salam"
 import encoding.json
 
-const DEFAULT_LAYOUT := "<!doctype html>\n<html lang=\"{{ lang }}\" dir=\"{{ dir }}\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>{{ title }}</title>\n{{ if description }}<meta name=\"description\" content=\"{{ description }}\">{{ end }}\n<link rel=\"canonical\" href=\"{{ site.url }}{{ url }}\">\n<meta property=\"og:title\" content=\"{{ title }}\">\n{{ if description }}<meta property=\"og:description\" content=\"{{ description }}\">{{ end }}\n<meta property=\"og:url\" content=\"{{ site.url }}{{ url }}\">\n<meta property=\"og:type\" content=\"website\">\n<meta name=\"twitter:card\" content=\"summary\">\n</head>\n<body>\n{{ & content }}\n</body>\n</html>\n"
+const DEFAULT_LAYOUT := "<!doctype html>\n<html lang=\"{{ lang }}\" dir=\"{{ dir }}\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>{{ title }}</title>\n{{ if description }}<meta name=\"description\" content=\"{{ description }}\">{{ end }}\n{{ if noindex }}<meta name=\"robots\" content=\"noindex\">{{ end }}\n<link rel=\"canonical\" href=\"{{ site.url }}{{ url }}\">\n<meta property=\"og:title\" content=\"{{ title }}\">\n{{ if description }}<meta property=\"og:description\" content=\"{{ description }}\">{{ end }}\n<meta property=\"og:url\" content=\"{{ site.url }}{{ url }}\">\n<meta property=\"og:type\" content=\"website\">\n<meta name=\"twitter:card\" content=\"summary\">\n</head>\n<body>\n{{ & content }}\n</body>\n</html>\n"
 
 func text_dir(lang: str): str:
     if lang == "fa" || lang == "ar" || lang == "he" || lang == "ur": ret "rtl" end
@@ -321,6 +322,10 @@ pub func Run(args: Vector<str>):
     search_val := search_index_value(pages)
     io.WriteFile(site.output + "/search-index.json", json.EncodeDefault(search_val))
     if !quiet: println "  wrote", site.output + "/search-index.json" end
+
+    os.MkdirAll(site.output + "/assets")
+    io.WriteFile(site.output + "/assets/neyx-search.js", search.Script())
+    if !quiet: println "  wrote", site.output + "/assets/neyx-search.js" end
 
     if os.IsDir(site.static_dir):
         os.CopyTree(site.static_dir, site.output)

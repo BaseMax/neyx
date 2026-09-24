@@ -11,17 +11,19 @@ pub func Build(site: config.Site, pages: Vector<p.Page>): str:
     str.BufAppend(b, "<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n")
     repeat pages.len() with i:
         page := pages.get(i)
-        date := p.Date(page)
-        str.BufAppend(b, "  <url><loc>")
-        str.BufAppend(b, site.url)
-        str.BufAppend(b, page.route)
-        str.BufAppend(b, "</loc>")
-        if date != "":
-            str.BufAppend(b, "<lastmod>")
-            str.BufAppend(b, date)
-            str.BufAppend(b, "</lastmod>")
+        if !p.BoolField(page.front, "noindex", false):
+            date := p.Date(page)
+            str.BufAppend(b, "  <url><loc>")
+            str.BufAppend(b, site.url)
+            str.BufAppend(b, page.route)
+            str.BufAppend(b, "</loc>")
+            if date != "":
+                str.BufAppend(b, "<lastmod>")
+                str.BufAppend(b, date)
+                str.BufAppend(b, "</lastmod>")
+            end
+            str.BufAppend(b, "</url>\n")
         end
-        str.BufAppend(b, "</url>\n")
     end
     str.BufAppend(b, "</urlset>\n")
     ret str.BufStr(b)

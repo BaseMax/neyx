@@ -1,0 +1,5 @@
+package search
+
+const SCRIPT := "(function(){\n  function NeyxSearch(inputSelector, resultsSelector, opts){\n    var input = document.querySelector(inputSelector);\n    var results = document.querySelector(resultsSelector);\n    if (!input || !results) return;\n    var limit = (opts && opts.limit) || 20;\n    var index = [];\n    fetch('/search-index.json').then(function(r){ return r.json(); }).then(function(data){ index = data; });\n    input.addEventListener('input', function(){\n      var q = input.value.trim().toLowerCase();\n      results.innerHTML = '';\n      if (!q) return;\n      index.filter(function(item){\n        var t = (item.title || '').toLowerCase();\n        var d = (item.description || '').toLowerCase();\n        return t.indexOf(q) !== -1 || d.indexOf(q) !== -1;\n      }).slice(0, limit).forEach(function(item){\n        var li = document.createElement('li');\n        var a = document.createElement('a');\n        a.href = item.url;\n        a.textContent = item.title;\n        li.appendChild(a);\n        results.appendChild(li);\n      });\n    });\n  }\n  window.NeyxSearch = NeyxSearch;\n})();\n"
+
+pub func Script(): str: ret SCRIPT end
