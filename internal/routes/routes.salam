@@ -1,0 +1,19 @@
+package routes
+
+import config "../config/config.salam"
+import content "../content/loader.salam"
+import p "../content/page.salam"
+
+pub func Run(_args: Vector<str>):
+    site := config.Load("neyx.config.yml")
+    pages := content.LoadAll(site.content_dir)
+    defer pages.free()
+
+    repeat pages.len() with i:
+        page := pages.get(i)
+        println page.route, "->", page.source_path, "(" + page.tmpl + ")"
+    end
+
+    println ""
+    println pages.len(), "route(s)"
+end

@@ -11,6 +11,7 @@ import cleancmd "../clean/clean.salam"
 import checkcmd "../check/check.salam"
 import infocmd "../info/info.salam"
 import doctorcmd "../doctor/doctor.salam"
+import routescmd "../routes/routes.salam"
 
 const VERSION := "0.1.0"
 
@@ -29,6 +30,7 @@ func new_app(): cli.App:
     cli.Register(app, "check", "Check the build for broken links and missing assets")
     cli.Register(app, "info", "Show project information")
     cli.Register(app, "doctor", "Diagnose common project problems")
+    cli.Register(app, "routes", "List computed routes")
     ret app
 end
 
@@ -85,6 +87,11 @@ pub func Run(process_argv: Vector<str>):
 
     if cmd == "doctor":
         doctorcmd.Run(rest)
+        ret
+    end
+
+    if cmd == "routes":
+        routescmd.Run(rest)
         ret
     end
 

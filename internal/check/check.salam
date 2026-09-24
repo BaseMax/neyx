@@ -48,6 +48,27 @@ func is_external(link: str): bool:
     ret false
 end
 
+func find_tags(text: str, tag_open: str): Vector<str>:
+    mut out := Vector {} as Vector<str>
+    n := text.len()
+    mut i := 0
+    while i < n:
+        idx := str.IndexFrom(text, tag_open, i)
+        if idx < 0:
+            i = n
+        else:
+            close := str.IndexFrom(text, ">", idx)
+            if close < 0:
+                i = n
+            else:
+                out.push(text.substr(idx, close - idx + 1))
+                i = close + 1
+            end
+        end
+    end
+    ret out
+end
+
 func exists_in_dist(dist: str, link: str): bool:
     clean := strip_query_hash(link)
     if clean == "": ret true end
@@ -99,6 +120,15 @@ pub func Run(_args: Vector<str>):
             each link in srcs:
                 if !is_external(link) && str.StartsWith(link, "/") && !exists_in_dist(site.output, link):
                     printerrln "missing asset:", file, "->", link
+                    problems += 1
+                end
+            end
+
+            imgs := find_tags(text, "<img")
+            defer imgs.free()
+            each tag in imgs:
+                if str.IndexOf(tag, " alt=") < 0:
+                    printerrln "missing alt text:", file, "->", tag
                     problems += 1
                 end
             end
