@@ -1,0 +1,18 @@
+package main
+
+import os
+import testing
+import tmpltest "tmpl_test.salam"
+import tmpledgetest "tmpl_edge_test.salam"
+import markdowntest "markdown_test.salam"
+import configtest "config_test.salam"
+import scaffoldtest "scaffold_test.salam"
+
+func main:
+    tmpltest.Run()
+    tmpledgetest.Run()
+    markdowntest.Run()
+    configtest.Run()
+    scaffoldtest.Run()
+    os.Exit(testing.Summary())
+end

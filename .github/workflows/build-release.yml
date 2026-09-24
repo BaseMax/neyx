@@ -89,7 +89,7 @@ jobs:
         run: salam build neyx.salam --output=${{ matrix.binary }}
 
       - name: Run internal tests
-        run: salam run run_tests.salam
+        run: salam run internal/tests/run_tests.salam
 
       - name: Smoke test
         shell: bash
