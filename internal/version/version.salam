@@ -1,3 +1,3 @@
 package version
 
-pub const VERSION := "0.1.1"
+pub const VERSION := "0.1.2"
