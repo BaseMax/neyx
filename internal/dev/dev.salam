@@ -2,11 +2,12 @@ package dev
 
 import os
 import str
+import conv
 import flag
 import buildcmd "../build/builder.salam"
 import config "../config/config.salam"
 
-func watch_paths(site: config.Site): str:
+func watch_paths(site: config.Site): Vector<str>:
     mut parts := Vector {} as Vector<str>
     parts.push(site.content_dir)
     parts.push(site.layouts_dir)
@@ -15,7 +16,70 @@ func watch_paths(site: config.Site): str:
     if os.IsDir(site.static_dir): parts.push(site.static_dir) end
     if site.theme != "" && os.IsDir("themes/" + site.theme): parts.push("themes/" + site.theme) end
     parts.push("neyx.config.yml")
-    ret str.Join(parts, " ")
+    ret parts
+end
+
+func unix_script(watch: str, stamp: str, script_path: str, build_cmd: str, output: str, port: str): str:
+    mut script := ""
+    script = script + "touch " + stamp + "\n"
+    script = script + "(while true; do\n"
+    script = script + "  changed=$(find " + watch + " -newer " + stamp + " 2>/dev/null)\n"
+    script = script + "  if [ -n \"$changed\" ]; then\n"
+    script = script + "    touch " + stamp + "\n"
+    script = script + "    echo \"\"\n"
+    script = script + "    echo \"Change detected, rebuilding...\"\n"
+    script = script + "    " + build_cmd + "\n"
+    script = script + "  fi\n"
+    script = script + "  sleep 1\n"
+    script = script + "done) &\n"
+    script = script + "watch_pid=$!\n"
+    script = script + "trap \"kill $watch_pid 2>/dev/null; rm -f " + stamp + " " + script_path + "\" EXIT\n"
+    script = script + "salam serve " + output + " --port=" + port + "\n"
+    ret script
+end
+
+func powershell_list(parts: Vector<str>): str:
+    mut b := str.NewBuilder()
+    defer str.BufFree(b)
+    str.BufAppend(b, "@(")
+    repeat parts.len() with i:
+        if i > 0: str.BufAppend(b, ",") end
+        str.BufAppend(b, "\"")
+        str.BufAppend(b, parts.get(i))
+        str.BufAppend(b, "\"")
+    end
+    str.BufAppend(b, ")")
+    ret str.BufStr(b)
+end
+
+func windows_script(watch_list: Vector<str>, stamp: str, script_path: str, build_cmd: str, output: str, port: str): str:
+    dirs := powershell_list(watch_list)
+    mut script := ""
+    script = script + "$ErrorActionPreference = 'SilentlyContinue'\n"
+    script = script + "Get-Date | Out-File -FilePath '" + stamp + "'\n"
+    script = script + "$job = Start-Job -ScriptBlock {\n"
+    script = script + "  param($stampFile, $dirs, $cmd)\n"
+    script = script + "  while ($true) {\n"
+    script = script + "    $stamp = (Get-Item $stampFile).LastWriteTime\n"
+    script = script + "    $changed = Get-ChildItem -Path $dirs -Recurse -File -ErrorAction SilentlyContinue | Where-Object { $_.LastWriteTime -gt $stamp }\n"
+    script = script + "    if ($changed) {\n"
+    script = script + "      Get-Date | Out-File -FilePath $stampFile\n"
+    script = script + "      Write-Host \"\"\n"
+    script = script + "      Write-Host \"Change detected, rebuilding...\"\n"
+    script = script + "      Invoke-Expression $cmd\n"
+    script = script + "    }\n"
+    script = script + "    Start-Sleep -Seconds 1\n"
+    script = script + "  }\n"
+    script = script + "} -ArgumentList '" + stamp + "', " + dirs + ", '" + build_cmd + "'\n"
+    script = script + "try {\n"
+    script = script + "  salam serve " + output + " --port=" + port + "\n"
+    script = script + "} finally {\n"
+    script = script + "  Stop-Job $job -ErrorAction SilentlyContinue\n"
+    script = script + "  Remove-Job $job -ErrorAction SilentlyContinue\n"
+    script = script + "  Remove-Item '" + stamp + "' -ErrorAction SilentlyContinue\n"
+    script = script + "  Remove-Item '" + script_path + "' -ErrorAction SilentlyContinue\n"
+    script = script + "}\n"
+    ret script
 end
 
 pub func Run(args: Vector<str>):
@@ -42,27 +106,28 @@ pub func Run(args: Vector<str>):
         build_cmd = build_cmd + " --drafts"
     end
 
-    watch := watch_paths(site)
-    stamp := "/tmp/.neyx-dev-stamp-$$"
-
-    mut script := ""
-    script = script + "touch " + stamp + "\n"
-    script = script + "(while true; do\n"
-    script = script + "  changed=$(find " + watch + " -newer " + stamp + " 2>/dev/null)\n"
-    script = script + "  if [ -n \"$changed\" ]; then\n"
-    script = script + "    touch " + stamp + "\n"
-    script = script + "    echo \"\"\n"
-    script = script + "    echo \"Change detected, rebuilding...\"\n"
-    script = script + "    " + build_cmd + "\n"
-    script = script + "  fi\n"
-    script = script + "  sleep 1\n"
-    script = script + "done) &\n"
-    script = script + "watch_pid=$!\n"
-    script = script + "trap \"kill $watch_pid 2>/dev/null; rm -f " + stamp + "\" EXIT\n"
-    script = script + "salam serve " + site.output + " --port=" + port + "\n"
+    watch_list := watch_paths(site)
+    defer watch_list.free()
 
     println ""
     println "Serving", site.output, "at http://localhost:" + port
     println "Watching for changes (Ctrl+C to stop)..."
-    os.Run(script)
+
+    tmp := os.TempDir()
+    pid := conv.FormatInt(os.Pid() as i64)
+
+    if SALAM_OS_WINDOWS:
+        stamp := tmp + "\\neyx-dev-stamp-" + pid + ".txt"
+        script_path := tmp + "\\neyx-dev-" + pid + ".ps1"
+        script := windows_script(watch_list, stamp, script_path, build_cmd, site.output, port)
+        os.WriteFile(script_path, script)
+        os.Run("powershell -NoProfile -ExecutionPolicy Bypass -File \"" + script_path + "\"")
+    else:
+        watch := str.Join(watch_list, " ")
+        stamp := tmp + "/.neyx-dev-stamp-" + pid
+        script_path := tmp + "/neyx-dev-" + pid + ".sh"
+        script := unix_script(watch, stamp, script_path, build_cmd, site.output, port)
+        os.WriteFile(script_path, script)
+        os.Run("sh \"" + script_path + "\"")
+    end
 end
