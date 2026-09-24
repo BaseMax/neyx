@@ -7,7 +7,7 @@ const CONFIG_TPL := "title: \"My Site\"\ndescription: \"A new Neyx site\"\nurl: 
 
 const INDEX_TPL := "---\ntitle: \"Home\"\ndescription: \"Welcome to my new Neyx site\"\n---\n\n# Welcome to Neyx\n\nThis is your new site. Edit `content/index.md` to get started.\n"
 
-const LAYOUT_TPL := "<!doctype html>\n<html lang=\"{{ site.language }}\">\n<head>\n<meta charset=\"utf-8\">\n<title>{{ title }} - {{ site.title }}</title>\n{{ if description }}<meta name=\"description\" content=\"{{ description }}\">{{ end }}\n</head>\n<body>\n<main>\n{{ & content }}\n</main>\n</body>\n</html>\n"
+const LAYOUT_TPL := "<!doctype html>\n<html lang=\"{{ site.language }}\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>{{ title }} - {{ site.title }}</title>\n{{ if description }}<meta name=\"description\" content=\"{{ description }}\">{{ end }}\n<link rel=\"canonical\" href=\"{{ site.url }}{{ url }}\">\n<meta property=\"og:title\" content=\"{{ title }}\">\n{{ if description }}<meta property=\"og:description\" content=\"{{ description }}\">{{ end }}\n<meta property=\"og:url\" content=\"{{ site.url }}{{ url }}\">\n<meta property=\"og:type\" content=\"website\">\n<meta name=\"twitter:card\" content=\"summary\">\n</head>\n<body>\n<main>\n{{ & content }}\n</main>\n</body>\n</html>\n"
 
 pub func Run(args: Vector<str>):
     if args.len() == 0:
