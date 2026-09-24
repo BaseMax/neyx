@@ -10,6 +10,7 @@ import p "../content/page.salam"
 import tmpl "../tmpl/tmpl.salam"
 import sitemap "../sitemap/sitemap.salam"
 import feed "../feed/feed.salam"
+import taxonomy "../taxonomy/taxonomy.salam"
 
 const DEFAULT_LAYOUT := "<!doctype html>\n<html lang=\"{{ site.language }}\">\n<head>\n<meta charset=\"utf-8\">\n<title>{{ title }}</title>\n{{ if description }}<meta name=\"description\" content=\"{{ description }}\">{{ end }}\n</head>\n<body>\n{{ & content }}\n</body>\n</html>\n"
 
@@ -111,6 +112,8 @@ pub func Run(_args: Vector<str>):
     if os.IsDir(site.assets_dir):
         os.CopyTree(site.assets_dir, site.output + "/assets")
     end
+
+    taxonomy.Build(site, pages)
 
     sitemap_xml := sitemap.Build(site, pages)
     io.WriteFile(site.output + "/sitemap.xml", sitemap_xml)

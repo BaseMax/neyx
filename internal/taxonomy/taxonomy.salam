@@ -1,0 +1,126 @@
+package taxonomy
+
+import os
+import io
+import collections
+import encoding.value
+import config "../config/config.salam"
+import p "../content/page.salam"
+import blk "../markdown/blocks.salam"
+import tmpl "../tmpl/tmpl.salam"
+
+const DEFAULT_TAG_LAYOUT := "<!doctype html><html><head><title>{{ tag }} - {{ site.title }}</title></head><body><h1>Tag: {{ tag }}</h1><ul>{{ each item in items }}<li><a href=\"{{ item.url }}\">{{ item.title }}</a></li>{{ end }}</ul></body></html>"
+
+const DEFAULT_TAGS_INDEX_LAYOUT := "<!doctype html><html><head><title>Tags - {{ site.title }}</title></head><body><h1>Tags</h1><ul>{{ each t in tags }}<li><a href=\"{{ t.url }}\">{{ t.name }}</a> ({{ t.count }})</li>{{ end }}</ul></body></html>"
+
+func layout_or(site: config.Site, name: str, fallback: str): str:
+    path := site.layouts_dir + "/" + name + ".html"
+    if os.Exists(path): ret io.ReadFile(path) end
+    ret fallback
+end
+
+func has_tag(page: p.Page, tag: str): bool:
+    mut ok := false
+    tags_val := value.ObjectGetOk(page.front, "tags", ok)
+    if !ok || !value.IsArray(tags_val): ret false end
+    mut found := false
+    repeat value.ArrayLen(tags_val) with j:
+        item := value.ArrayGet(tags_val, j)
+        if value.IsString(item) && value.AsString(item) == tag:
+            found = true
+        end
+    end
+    ret found
+end
+
+func collect_tags(pages: Vector<p.Page>): Vector<str>:
+    mut out := Vector {} as Vector<str>
+    repeat pages.len() with i:
+        page := pages.get(i)
+        mut ok := false
+        tags_val := value.ObjectGetOk(page.front, "tags", ok)
+        if ok && value.IsArray(tags_val):
+            repeat value.ArrayLen(tags_val) with j:
+                item := value.ArrayGet(tags_val, j)
+                if value.IsString(item):
+                    tag := value.AsString(item)
+                    if !collections.contains(out, tag):
+                        out.push(tag)
+                    end
+                end
+            end
+        end
+    end
+    ret out
+end
+
+func page_summary(page: p.Page): value.Value:
+    mut v := value.ValueClone(page.front)
+    value.ObjectSet(v, "url", value.ValueString(page.route))
+    ret v
+end
+
+func write_tag_page(site: config.Site, tag: str, pages: Vector<p.Page>):
+    slug := blk.Slugify(tag)
+    mut items := value.NewValueArray()
+    repeat pages.len() with i:
+        page := pages.get(i)
+        if has_tag(page, tag):
+            value.ArrayPush(items, page_summary(page))
+        end
+    end
+
+    mut root := value.NewValueObject()
+    value.ObjectSet(root, "tag", value.ValueString(tag))
+    value.ObjectSet(root, "items", items)
+    value.ObjectSet(root, "site", site.data)
+
+    tpl_text := layout_or(site, "tag", DEFAULT_TAG_LAYOUT)
+    html := tmpl.Render(tpl_text, root)
+
+    dir := site.output + "/tags/" + slug + "/"
+    os.MkdirAll(dir)
+    io.WriteFile(dir + "index.html", html)
+    println "  wrote", dir + "index.html"
+end
+
+func write_tags_index(site: config.Site, tags: Vector<str>, pages: Vector<p.Page>):
+    mut tags_arr := value.NewValueArray()
+    repeat tags.len() with i:
+        tag := tags.get(i)
+        slug := blk.Slugify(tag)
+        mut count := 0
+        repeat pages.len() with j:
+            if has_tag(pages.get(j), tag): count += 1 end
+        end
+        mut entry := value.NewValueObject()
+        value.ObjectSet(entry, "name", value.ValueString(tag))
+        value.ObjectSet(entry, "slug", value.ValueString(slug))
+        value.ObjectSet(entry, "url", value.ValueString("/tags/" + slug + "/"))
+        value.ObjectSet(entry, "count", value.ValueInt(count as i64))
+        value.ArrayPush(tags_arr, entry)
+    end
+
+    mut root := value.NewValueObject()
+    value.ObjectSet(root, "tags", tags_arr)
+    value.ObjectSet(root, "site", site.data)
+
+    tpl_text := layout_or(site, "tags", DEFAULT_TAGS_INDEX_LAYOUT)
+    html := tmpl.Render(tpl_text, root)
+
+    dir := site.output + "/tags/"
+    os.MkdirAll(dir)
+    io.WriteFile(dir + "index.html", html)
+    println "  wrote", dir + "index.html"
+end
+
+pub func Build(site: config.Site, pages: Vector<p.Page>):
+    tags := collect_tags(pages)
+    defer tags.free()
+    if tags.len() == 0: ret end
+
+    repeat tags.len() with i:
+        write_tag_page(site, tags.get(i), pages)
+    end
+    write_tags_index(site, tags, pages)
+end
