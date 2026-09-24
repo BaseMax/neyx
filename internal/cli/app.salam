@@ -12,6 +12,7 @@ import checkcmd "../check/check.salam"
 import infocmd "../info/info.salam"
 import doctorcmd "../doctor/doctor.salam"
 import routescmd "../routes/routes.salam"
+import benchmarkcmd "../benchmark/benchmark.salam"
 
 const VERSION := "0.1.0"
 
@@ -31,6 +32,7 @@ func new_app(): cli.App:
     cli.Register(app, "info", "Show project information")
     cli.Register(app, "doctor", "Diagnose common project problems")
     cli.Register(app, "routes", "List computed routes")
+    cli.Register(app, "benchmark", "Time repeated builds of this project")
     ret app
 end
 
@@ -92,6 +94,11 @@ pub func Run(process_argv: Vector<str>):
 
     if cmd == "routes":
         routescmd.Run(rest)
+        ret
+    end
+
+    if cmd == "benchmark":
+        benchmarkcmd.Run(rest)
         ret
     end
 

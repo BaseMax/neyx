@@ -1,0 +1,42 @@
+package benchmark
+
+import time
+import conv
+import config "../config/config.salam"
+import content "../content/loader.salam"
+import buildcmd "../build/builder.salam"
+
+const ITERATIONS := 3
+
+pub func Run(_args: Vector<str>):
+    site := config.Load("neyx.config.yml")
+    pages := content.LoadAll(site.content_dir, site.languages)
+    n := pages.len()
+    pages.free()
+
+    println "Neyx benchmark"
+    println ""
+    println "Pages:", n
+    println ""
+
+    mut total_ms := 0.0
+    mut best_ms := 0.0
+    repeat ITERATIONS with i:
+        mut json_args := Vector {} as Vector<str>
+        json_args.push("--json")
+        start := time.MonoNanos()
+        buildcmd.Run(json_args)
+        elapsed := time.SinceMs(start)
+        total_ms += elapsed
+        if i == 0 || elapsed < best_ms: best_ms = elapsed end
+    end
+
+    avg_ms := total_ms / (ITERATIONS as f64)
+    println ""
+    println "Best:   ", conv.FormatFloatPrec(best_ms, 2), "ms"
+    println "Average:", conv.FormatFloatPrec(avg_ms, 2), "ms"
+    if best_ms > 0.0:
+        pages_per_sec := (n as f64) / (best_ms / 1000.0)
+        println "Throughput:", conv.FormatFloatPrec(pages_per_sec, 1), "pages/sec"
+    end
+end
