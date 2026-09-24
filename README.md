@@ -31,7 +31,7 @@ neyx preview
 | --- | --- |
 | `neyx new <name>` | Scaffold a new project |
 | `neyx new post <title>` | Create a new dated post under `content/posts/` |
-| `neyx build [--drafts] [--pretty]` | Build the site into the output directory |
+| `neyx build [--drafts] [--pretty] [--no-images] [--json]` | Build the site into the output directory |
 | `neyx dev [--port] [--drafts]` | Build and serve the site |
 | `neyx preview [--port]` | Serve an existing production build |
 | `neyx clean` | Remove the output directory |
@@ -41,8 +41,11 @@ neyx preview
 | `neyx doctor` | Diagnose common project problems |
 | `neyx version` / `neyx help` | Version and usage |
 
-`neyx build` minifies HTML/XML output by default; pass `--pretty` for
-readable output. `neyx dev` always builds with `--pretty`.
+`neyx build` minifies HTML/XML output by default (`--pretty` for readable
+output), generates responsive JPEG/PNG variants at 480/960/1440px (`--no-images`
+to skip), and can print a single-line JSON summary instead of the normal log
+(`--json`, handy for CI). `neyx dev` always builds with `--pretty --no-images`
+for fast iteration.
 
 ## Project layout
 
@@ -53,7 +56,8 @@ my-site/
 ├── layouts/       HTML templates
 ├── assets/        copied to output/assets/
 ├── data/          YAML/JSON, exposed to templates as {{ data.<file>.* }}
-└── static/        copied as-is to the output root (overrides generated files)
+├── static/        copied as-is to the output root (overrides generated files)
+└── themes/<name>/ optional layouts/ and assets/ a project can fall back to
 ```
 
 Routes are derived from the path under `content/`: `content/about.md` becomes
@@ -75,9 +79,28 @@ data: "data"
 static: "static"
 pagination_size: 10
 languages: ["en", "fa"]
+optimize_images: true
+theme: ""
+hooks:
+  before_build: "echo starting"
+  after_build: "echo done"
 ```
 
 Every key is also available in templates under `{{ site.* }}`.
+
+### Themes
+
+Set `theme` to a name and add `themes/<name>/layouts/` and
+`themes/<name>/assets/`. A layout or asset in the project's own `layouts/`
+or `assets/` always wins, so a site only needs to override the files it
+wants to change — everything else falls through to the theme, then to
+Neyx's built-in default layout.
+
+### Hooks
+
+`hooks.before_build` runs (via the shell) right after config is loaded,
+before any content is read; `hooks.after_build` runs after every file has
+been written, including the static-passthrough overlay.
 
 ### Multi-language sites
 
