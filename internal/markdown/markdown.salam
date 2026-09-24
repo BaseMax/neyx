@@ -79,6 +79,19 @@ pub func ToHtml(body: str, toc_out &: str, html_out &: str):
             continue
         end
 
+        if str.StartsWith(line, "<") && !str.StartsWith(line, "<!--"):
+            blk.FlushOpenBlock(html, para_lines, list_kind, list_items, quote_lines)
+            while i < n:
+                html_line := str.TrimSuffix(lines.get(i), "\r")
+                if str.IsEmpty(str.Trim(html_line)): break end
+                str.BufAppend(html, html_line)
+                str.BufAppend(html, "\n")
+                i += 1
+            end
+            str.BufAppend(html, "\n")
+            continue
+        end
+
         if str.StartsWith(line, "# "):
             blk.FlushOpenBlock(html, para_lines, list_kind, list_items, quote_lines)
             text := str.Trim(line.substr(2, line.len() - 2))
