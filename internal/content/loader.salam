@@ -85,6 +85,20 @@ func load_page(dir: str, path: str, languages: Vector<str>): p.Page:
     ret page
 end
 
+func sort_by_route(pages &: Vector<p.Page>):
+    n := pages.len()
+    repeat n with i:
+        mut j := i
+        while j > 0 && str.Compare(pages.get(j - 1).route, pages.get(j).route) > 0:
+            a := pages.get(j - 1)
+            b := pages.get(j)
+            pages.set(j - 1, b)
+            pages.set(j, a)
+            j -= 1
+        end
+    end
+end
+
 pub func LoadAll(dir: str, languages: Vector<str>): Vector<p.Page>:
     mut out := Vector {} as Vector<p.Page>
     if !os.IsDir(dir): ret out end
@@ -96,5 +110,6 @@ pub func LoadAll(dir: str, languages: Vector<str>): Vector<p.Page>:
             out.push(load_page(dir, path, languages))
         end
     end
+    sort_by_route(out)
     ret out
 end
