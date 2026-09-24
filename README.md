@@ -165,9 +165,23 @@ with a `date`, newest first).
 ## Generated output
 
 Every build also writes `sitemap.xml`, `feed.xml` (RSS), `robots.txt`,
-`api/pages.json`, `api/posts.json`, and `search-index.json` into the output
-directory, plus `/tags/<tag>/` and `/tags/` pages for any `tags` used in
-front matter.
+`api/pages.json`, `api/posts.json`, `search-index.json`, and a small
+dependency-free `assets/neyx-search.js` into the output directory, plus
+`/tags/<tag>/` and `/tags/` pages for any `tags` used in front matter.
+`sitemap.xml` skips any page with `noindex: true` in front matter (which
+also adds `<meta name="robots" content="noindex">` in the built-in layout).
+
+### Client-side search
+
+```html
+<script src="/assets/neyx-search.js"></script>
+<input id="q" placeholder="Search…">
+<ul id="results"></ul>
+<script>NeyxSearch('#q', '#results')</script>
+```
+
+It fetches `/search-index.json` once and filters by title/description as
+the user types — no server or build step required.
 
 ## License
 
