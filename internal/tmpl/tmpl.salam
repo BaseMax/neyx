@@ -2,21 +2,32 @@ package tmpl
 
 import str
 import conv
+import math
+import encoding
 import encoding.value
 import esc "../markdown/escape.salam"
+import blk "../markdown/blocks.salam"
 
 pub const NodeText := 0
 pub const NodeVar := 1
 pub const NodeRaw := 2
 pub const NodeIf := 3
 pub const NodeEach := 4
+pub const NodeWith := 5
+
+pub struct FilterCall:
+    pub name: str = ""
+    pub args: Vector<str> = Vector {} as Vector<str>
+end
 
 pub struct Node:
     pub kind: int = NodeText
     pub text: str = ""
     pub path: str = ""
-    pub negate: bool = false
     pub loop_var: str = ""
+    pub index_var: str = ""
+    pub with_name: str = ""
+    pub filters: Vector<FilterCall> = Vector {} as Vector<FilterCall>
     pub body: Vector<Node> = Vector {} as Vector<Node>
     pub else_body: Vector<Node> = Vector {} as Vector<Node>
 end
@@ -35,6 +46,111 @@ func find_tag(t: str, from: int, tag_out &: str, start_out &: int, end_out &: in
     start_out = lb
     end_out = rb + 2
     ret true
+end
+
+func quote_aware_split_char(s: str, sep: str): Vector<str>:
+    mut out := Vector {} as Vector<str>
+    mut cur := str.NewBuilder()
+    n := s.len()
+    mut in_quote := false
+    mut quote_ch := ""
+    mut i := 0
+    while i < n:
+        c := s.substr(i, 1)
+        if in_quote:
+            str.BufAppend(cur, c)
+            if c == quote_ch: in_quote = false end
+            i += 1
+            continue
+        end
+        if c == "\"" || c == "'":
+            in_quote = true
+            quote_ch = c
+            str.BufAppend(cur, c)
+            i += 1
+            continue
+        end
+        if c == sep:
+            out.push(str.BufStr(cur))
+            str.BufReset(cur)
+            i += 1
+            continue
+        end
+        str.BufAppend(cur, c)
+        i += 1
+    end
+    out.push(str.BufStr(cur))
+    str.BufFree(cur)
+    ret out
+end
+
+func tokenize_args(s: str): Vector<str>:
+    mut out := Vector {} as Vector<str>
+    mut cur := str.NewBuilder()
+    mut has_cur := false
+    n := s.len()
+    mut in_quote := false
+    mut quote_ch := ""
+    mut i := 0
+    while i < n:
+        c := s.substr(i, 1)
+        if in_quote:
+            if c == quote_ch:
+                in_quote = false
+            else:
+                str.BufAppend(cur, c)
+            end
+            i += 1
+            continue
+        end
+        if c == "\"" || c == "'":
+            in_quote = true
+            quote_ch = c
+            has_cur = true
+            i += 1
+            continue
+        end
+        if c == " " || c == "\t":
+            if has_cur:
+                out.push(str.BufStr(cur))
+                str.BufReset(cur)
+                has_cur = false
+            end
+            i += 1
+            continue
+        end
+        str.BufAppend(cur, c)
+        has_cur = true
+        i += 1
+    end
+    if has_cur:
+        out.push(str.BufStr(cur))
+    end
+    str.BufFree(cur)
+    ret out
+end
+
+func parse_pipeline(expr: str, path_out &: str, filters_out &: Vector<FilterCall>):
+    segments := quote_aware_split_char(expr, "|")
+    path_out = str.Trim(segments.get(0))
+    mut i := 1
+    while i < segments.len():
+        seg := str.Trim(segments.get(i))
+        toks := tokenize_args(seg)
+        mut fc := FilterCall {}
+        if toks.len() > 0:
+            fc.name = toks.get(0)
+            mut j := 1
+            while j < toks.len():
+                fc.args.push(toks.get(j))
+                j += 1
+            end
+        end
+        filters_out.push(fc)
+        toks.free()
+        i += 1
+    end
+    segments.free()
 end
 
 func parse_nodes(t: str, pos &: int, ended &: str): Vector<Node>:
@@ -73,14 +189,13 @@ func parse_nodes(t: str, pos &: int, ended &: str): Vector<Node>:
             ret nodes
         end
 
+        if str.StartsWith(tag, "!"):
+            pos = tend
+            continue
+        end
+
         if str.StartsWith(tag, "if "):
             cond := str.Trim(tag.substr(3, tag.len() - 3))
-            mut negate := false
-            mut path := cond
-            if str.StartsWith(cond, "!"):
-                negate = true
-                path = str.Trim(cond.substr(1, cond.len() - 1))
-            end
             pos = tend
             mut then_ended := ""
             body := parse_nodes(t, pos, then_ended)
@@ -90,8 +205,7 @@ func parse_nodes(t: str, pos &: int, ended &: str): Vector<Node>:
                 else_body = parse_nodes(t, pos, else_ended)
             end
             mut node := Node { kind = NodeIf }
-            node.path = path
-            node.negate = negate
+            node.path = cond
             node.body = body
             node.else_body = else_body
             nodes.push(node)
@@ -101,11 +215,18 @@ func parse_nodes(t: str, pos &: int, ended &: str): Vector<Node>:
         if str.StartsWith(tag, "each "):
             rest := str.Trim(tag.substr(5, tag.len() - 5))
             in_idx := str.IndexOf(rest, " in ")
-            mut loop_var := rest
+            mut vars_part := rest
             mut src_path := ""
             if in_idx > 0:
-                loop_var = str.Trim(rest.substr(0, in_idx))
+                vars_part = str.Trim(rest.substr(0, in_idx))
                 src_path = str.Trim(rest.substr(in_idx + 4, rest.len() - in_idx - 4))
+            end
+            mut index_var := ""
+            mut loop_var := vars_part
+            comma_idx := str.IndexOf(vars_part, ",")
+            if comma_idx > 0:
+                index_var = str.Trim(vars_part.substr(0, comma_idx))
+                loop_var = str.Trim(vars_part.substr(comma_idx + 1, vars_part.len() - comma_idx - 1))
             end
             pos = tend
             mut body_ended := ""
@@ -113,21 +234,53 @@ func parse_nodes(t: str, pos &: int, ended &: str): Vector<Node>:
             mut node := Node { kind = NodeEach }
             node.path = src_path
             node.loop_var = loop_var
+            node.index_var = index_var
             node.body = body
             nodes.push(node)
             continue
         end
 
+        if str.StartsWith(tag, "with "):
+            rest := str.Trim(tag.substr(5, tag.len() - 5))
+            as_idx := str.IndexOf(rest, " as ")
+            mut src_path := rest
+            mut alias := "with"
+            if as_idx > 0:
+                src_path = str.Trim(rest.substr(0, as_idx))
+                alias = str.Trim(rest.substr(as_idx + 4, rest.len() - as_idx - 4))
+            end
+            pos = tend
+            mut then_ended := ""
+            body := parse_nodes(t, pos, then_ended)
+            mut else_body := Vector {} as Vector<Node>
+            if then_ended == "else":
+                mut else_ended := ""
+                else_body = parse_nodes(t, pos, else_ended)
+            end
+            mut node := Node { kind = NodeWith }
+            node.path = src_path
+            node.with_name = alias
+            node.body = body
+            node.else_body = else_body
+            nodes.push(node)
+            continue
+        end
+
         if str.StartsWith(tag, "&"):
+            expr := str.Trim(tag.substr(1, tag.len() - 1))
             mut node := Node { kind = NodeRaw }
-            node.path = str.Trim(tag.substr(1, tag.len() - 1))
+            mut path := ""
+            parse_pipeline(expr, path, node.filters)
+            node.path = path
             nodes.push(node)
             pos = tend
             continue
         end
 
         mut node := Node { kind = NodeVar }
-        node.path = tag
+        mut path := ""
+        parse_pipeline(tag, path, node.filters)
+        node.path = path
         nodes.push(node)
         pos = tend
     end
@@ -194,6 +347,336 @@ func to_str(v: value.Value): str:
     ret ""
 end
 
+func as_number(v: value.Value): f64:
+    if value.IsInt(v): ret value.AsInt(v) as f64 end
+    if value.IsFloat(v): ret value.AsFloat(v) end
+    ret 0.0
+end
+
+func is_numeric_literal(s: str): bool:
+    if s == "": ret false end
+    n := s.len()
+    mut i := 0
+    if s.substr(0, 1) == "-": i = 1 end
+    if i >= n: ret false end
+    mut dots := 0
+    mut digits := 0
+    while i < n:
+        c := s.substr(i, 1)
+        if c == ".":
+            dots += 1
+            if dots > 1: ret false end
+        else c >= "0" && c <= "9":
+            digits += 1
+        else:
+            ret false
+        end
+        i += 1
+    end
+    ret digits > 0
+end
+
+func parse_literal(root: value.Value, scopes: Vector<Frame>, tok: str): value.Value:
+    n := tok.len()
+    if n >= 2 && str.StartsWith(tok, "\"") && str.EndsWith(tok, "\""):
+        ret value.ValueString(tok.substr(1, n - 2))
+    end
+    if n >= 2 && str.StartsWith(tok, "'") && str.EndsWith(tok, "'"):
+        ret value.ValueString(tok.substr(1, n - 2))
+    end
+    if tok == "true": ret value.ValueBool(true) end
+    if tok == "false": ret value.ValueBool(false) end
+    if is_numeric_literal(tok):
+        if str.Contains(tok, "."):
+            ret value.ValueFloat(conv.ParseFloat(tok))
+        end
+        ret value.ValueInt(conv.ParseInt(tok))
+    end
+    ret lookup(root, scopes, tok)
+end
+
+func find_cmp_op(a: str, idx_out &: int, len_out &: int, op_out &: str): bool:
+    n := a.len()
+    mut in_quote := false
+    mut quote_ch := ""
+    mut i := 0
+    while i < n:
+        c := a.substr(i, 1)
+        if in_quote:
+            if c == quote_ch: in_quote = false end
+            i += 1
+            continue
+        end
+        if c == "\"" || c == "'":
+            in_quote = true
+            quote_ch = c
+            i += 1
+            continue
+        end
+        if i + 1 < n:
+            two := a.substr(i, 2)
+            if two == "==" || two == "!=" || two == ">=" || two == "<=":
+                idx_out = i
+                len_out = 2
+                op_out = two
+                ret true
+            end
+        end
+        if c == ">" || c == "<":
+            idx_out = i
+            len_out = 1
+            op_out = c
+            ret true
+        end
+        i += 1
+    end
+    ret false
+end
+
+func eval_atom(root: value.Value, scopes: Vector<Frame>, atom: str): bool:
+    a := str.Trim(atom)
+    if a == "": ret false end
+    if str.StartsWith(a, "!"):
+        inner := str.Trim(a.substr(1, a.len() - 1))
+        ret !truthy(lookup(root, scopes, inner))
+    end
+
+    mut op_idx := 0
+    mut op_len := 0
+    mut op := ""
+    has_op := find_cmp_op(a, op_idx, op_len, op)
+    if has_op:
+        lhs_tok := str.Trim(a.substr(0, op_idx))
+        rhs_tok := str.Trim(a.substr(op_idx + op_len, a.len() - op_idx - op_len))
+        lhs := lookup(root, scopes, lhs_tok)
+        rhs := parse_literal(root, scopes, rhs_tok)
+        if op == "==": ret value.Equal(lhs, rhs) end
+        if op == "!=": ret !value.Equal(lhs, rhs) end
+        if value.IsNumber(lhs) && value.IsNumber(rhs):
+            ln := as_number(lhs)
+            rn := as_number(rhs)
+            if op == ">": ret ln > rn end
+            if op == "<": ret ln < rn end
+            if op == ">=": ret ln >= rn end
+            ret ln <= rn
+        end
+        if value.IsString(lhs) && value.IsString(rhs):
+            ls := value.AsString(lhs)
+            rs := value.AsString(rhs)
+            if op == ">": ret ls > rs end
+            if op == "<": ret ls < rs end
+            if op == ">=": ret ls >= rs end
+            ret ls <= rs
+        end
+        ret false
+    end
+
+    ret truthy(lookup(root, scopes, a))
+end
+
+func find_logical_op(a: str, op_out &: str): bool:
+    n := a.len()
+    mut in_quote := false
+    mut quote_ch := ""
+    mut i := 0
+    while i < n:
+        c := a.substr(i, 1)
+        if in_quote:
+            if c == quote_ch: in_quote = false end
+            i += 1
+            continue
+        end
+        if c == "\"" || c == "'":
+            in_quote = true
+            quote_ch = c
+            i += 1
+            continue
+        end
+        if i + 1 < n:
+            two := a.substr(i, 2)
+            if two == "&&" || two == "||":
+                op_out = two
+                ret true
+            end
+        end
+        i += 1
+    end
+    ret false
+end
+
+func eval_cond(root: value.Value, scopes: Vector<Frame>, cond: str): bool:
+    mut logical_op := ""
+    has_logical := find_logical_op(cond, logical_op)
+    if !has_logical:
+        ret eval_atom(root, scopes, cond)
+    end
+
+    parts := str.Split(cond, logical_op)
+    defer parts.free()
+    if logical_op == "&&":
+        mut i := 0
+        while i < parts.len():
+            if !eval_atom(root, scopes, parts.get(i)): ret false end
+            i += 1
+        end
+        ret true
+    end
+
+    mut i := 0
+    while i < parts.len():
+        if eval_atom(root, scopes, parts.get(i)): ret true end
+        i += 1
+    end
+    ret false
+end
+
+func filter_arg(fc: FilterCall, idx: int, def: str): str:
+    if idx < fc.args.len(): ret fc.args.get(idx) end
+    ret def
+end
+
+func strip_tags(s: str): str:
+    mut sb := str.NewBuilder()
+    defer str.BufFree(sb)
+    n := s.len()
+    mut i := 0
+    mut in_tag := false
+    while i < n:
+        c := s.substr(i, 1)
+        if c == "<":
+            in_tag = true
+        else c == ">":
+            in_tag = false
+        else:
+            if !in_tag: str.BufAppend(sb, c) end
+        end
+        i += 1
+    end
+    ret str.BufStr(sb)
+end
+
+func apply_filter(v: value.Value, fc: FilterCall, safe_out &: bool): value.Value:
+    name := fc.name
+
+    if name == "safe":
+        safe_out = true
+        ret v
+    end
+    if name == "upper": ret value.ValueString(str.Upper(to_str(v))) end
+    if name == "lower": ret value.ValueString(str.Lower(to_str(v))) end
+    if name == "title": ret value.ValueString(str.Title(to_str(v))) end
+    if name == "trim": ret value.ValueString(str.Trim(to_str(v))) end
+    if name == "reverse":
+        if value.IsArray(v):
+            len := value.ArrayLen(v)
+            mut out := value.NewValueArray()
+            mut i := len - 1
+            while i >= 0:
+                value.ArrayPush(out, value.ArrayGet(v, i))
+                i -= 1
+            end
+            ret out
+        end
+        ret value.ValueString(str.Reverse(to_str(v)))
+    end
+    if name == "length":
+        if value.IsArray(v): ret value.ValueInt(value.ArrayLen(v) as i64) end
+        if value.IsObject(v): ret value.ValueInt(value.ObjectLen(v) as i64) end
+        ret value.ValueInt(to_str(v).len() as i64)
+    end
+    if name == "first":
+        if value.IsArray(v):
+            if value.ArrayLen(v) == 0: ret value.Value {} end
+            ret value.ArrayGet(v, 0)
+        end
+        s := to_str(v)
+        if s.len() == 0: ret value.ValueString("") end
+        ret value.ValueString(s.substr(0, 1))
+    end
+    if name == "last":
+        if value.IsArray(v):
+            len := value.ArrayLen(v)
+            if len == 0: ret value.Value {} end
+            ret value.ArrayGet(v, len - 1)
+        end
+        s := to_str(v)
+        if s.len() == 0: ret value.ValueString("") end
+        ret value.ValueString(s.substr(s.len() - 1, 1))
+    end
+    if name == "join":
+        sep := filter_arg(fc, 0, ",")
+        if value.IsArray(v):
+            mut parts := Vector {} as Vector<str>
+            repeat value.ArrayLen(v) with i:
+                parts.push(to_str(value.ArrayGet(v, i)))
+            end
+            joined := str.Join(parts, sep)
+            parts.free()
+            ret value.ValueString(joined)
+        end
+        ret v
+    end
+    if name == "truncate":
+        limit := conv.Atoi(filter_arg(fc, 0, "0"))
+        s := to_str(v)
+        if s.len() <= limit: ret value.ValueString(s) end
+        ret value.ValueString(s.substr(0, limit) + "...")
+    end
+    if name == "truncatewords":
+        limit := conv.Atoi(filter_arg(fc, 0, "0"))
+        words := str.Fields(to_str(v))
+        if words.len() <= limit:
+            joined_all := str.Join(words, " ")
+            words.free()
+            ret value.ValueString(joined_all)
+        end
+        mut parts := Vector {} as Vector<str>
+        mut i := 0
+        while i < limit:
+            parts.push(words.get(i))
+            i += 1
+        end
+        joined := str.Join(parts, " ")
+        parts.free()
+        words.free()
+        ret value.ValueString(joined + "...")
+    end
+    if name == "replace":
+        old := filter_arg(fc, 0, "")
+        nw := filter_arg(fc, 1, "")
+        ret value.ValueString(str.Replace(to_str(v), old, nw))
+    end
+    if name == "default":
+        if truthy(v): ret v end
+        ret value.ValueString(filter_arg(fc, 0, ""))
+    end
+    if name == "slugify": ret value.ValueString(blk.Slugify(to_str(v))) end
+    if name == "striptags": ret value.ValueString(strip_tags(to_str(v))) end
+    if name == "urlencode": ret value.ValueString(encoding.URLEncode(to_str(v))) end
+    if name == "round": ret value.ValueInt(math.Round(as_number(v)) as i64) end
+    if name == "abs":
+        if value.IsInt(v): ret value.ValueInt(math.AbsI64(value.AsInt(v))) end
+        ret value.ValueFloat(math.Abs(as_number(v)))
+    end
+    if name == "pluralize":
+        singular := filter_arg(fc, 0, "")
+        plural := filter_arg(fc, 1, singular + "s")
+        count := as_number(v) as i64
+        if count == 1: ret value.ValueString(singular) end
+        ret value.ValueString(plural)
+    end
+
+    ret v
+end
+
+func apply_filters(v: value.Value, filters: Vector<FilterCall>, safe_out &: bool): value.Value:
+    mut cur := v
+    repeat filters.len() with i:
+        cur = apply_filter(cur, filters.get(i), safe_out)
+    end
+    ret cur
+end
+
 func render_nodes(nodes: Vector<Node>, root: value.Value, scopes &: Vector<Frame>, out &: str.StringBuilder):
     repeat nodes.len() with i:
         node := nodes.get(i)
@@ -201,14 +684,21 @@ func render_nodes(nodes: Vector<Node>, root: value.Value, scopes &: Vector<Frame
             str.BufAppend(out, node.text)
         else node.kind == NodeVar:
             v := lookup(root, scopes, node.path)
-            str.BufAppend(out, esc.EscapeHtml(to_str(v)))
+            mut safe := false
+            v2 := apply_filters(v, node.filters, safe)
+            s := to_str(v2)
+            if safe:
+                str.BufAppend(out, s)
+            else:
+                str.BufAppend(out, esc.EscapeHtml(s))
+            end
         else node.kind == NodeRaw:
             v := lookup(root, scopes, node.path)
-            str.BufAppend(out, to_str(v))
+            mut safe := false
+            v2 := apply_filters(v, node.filters, safe)
+            str.BufAppend(out, to_str(v2))
         else node.kind == NodeIf:
-            v := lookup(root, scopes, node.path)
-            mut cond := truthy(v)
-            if node.negate: cond = !cond end
+            cond := eval_cond(root, scopes, node.path)
             if cond:
                 render_nodes(node.body, root, scopes, out)
             else:
@@ -217,13 +707,47 @@ func render_nodes(nodes: Vector<Node>, root: value.Value, scopes &: Vector<Frame
         else node.kind == NodeEach:
             v := lookup(root, scopes, node.path)
             if value.IsArray(v):
-                mut frame := Frame { name = node.loop_var }
-                repeat value.ArrayLen(v) with idx:
-                    frame.val = value.ArrayGet(v, idx)
-                    scopes.push(frame)
+                len := value.ArrayLen(v)
+                mut item_frame := Frame { name = node.loop_var }
+                mut idx_frame := Frame { name = node.index_var }
+                mut loop_frame := Frame { name = "loop" }
+                has_idx := node.index_var != ""
+                repeat len with idx:
+                    item_frame.val = value.ArrayGet(v, idx)
+                    scopes.push(item_frame)
+                    if has_idx:
+                        idx_frame.val = value.ValueInt(idx as i64)
+                        scopes.push(idx_frame)
+                    end
+
+                    mut loop_obj := value.NewValueObject()
+                    value.ObjectSet(loop_obj, "index", value.ValueInt(idx as i64))
+                    value.ObjectSet(loop_obj, "index1", value.ValueInt((idx + 1) as i64))
+                    value.ObjectSet(loop_obj, "first", value.ValueBool(idx == 0))
+                    value.ObjectSet(loop_obj, "last", value.ValueBool(idx == len - 1))
+                    value.ObjectSet(loop_obj, "length", value.ValueInt(len as i64))
+                    loop_frame.val = loop_obj
+                    scopes.push(loop_frame)
+
                     render_nodes(node.body, root, scopes, out)
-                    _dropped := scopes.pop()
+
+                    _d1 := scopes.pop()
+                    if has_idx:
+                        _d2 := scopes.pop()
+                    end
+                    _d0 := scopes.pop()
                 end
+            end
+        else node.kind == NodeWith:
+            v := lookup(root, scopes, node.path)
+            if truthy(v):
+                mut frame := Frame { name = node.with_name }
+                frame.val = v
+                scopes.push(frame)
+                render_nodes(node.body, root, scopes, out)
+                _d := scopes.pop()
+            else:
+                render_nodes(node.else_body, root, scopes, out)
             end
         end
     end

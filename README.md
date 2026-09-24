@@ -208,8 +208,28 @@ Welcome to my site.
 
 - `{{ path.to.value }}`: HTML-escaped output.
 - `{{ & path }}`: raw, unescaped output (used for rendered page content).
-- `{{ if path }} ... {{ else }} ... {{ end }}`: truthy conditional.
+- `{{! a comment }}`: removed entirely from output.
+- `{{ if cond }} ... {{ else }} ... {{ end }}`: conditional. `cond` can be a bare
+  path (truthy), `!path` (falsy), a comparison (`a == b`, `a != b`, `a > b`,
+  `a < b`, `a >= b`, `a <= b`, against a literal string, number, `true`/`false`,
+  or another path), or a chain of comparisons joined by all `&&` or all `||`.
 - `{{ each item in path }} ... {{ end }}`: loop over an array.
+- `{{ each i, item in path }} ... {{ end }}`: loop with a 0-based index variable.
+  Every loop body also gets `loop.index` (0-based), `loop.index1` (1-based),
+  `loop.first`, `loop.last`, and `loop.length`.
+- `{{ with path as name }} ... {{ else }} ... {{ end }}`: if `path` is truthy,
+  renders the body with `name` bound to it; otherwise renders the `else`
+  branch. `as name` is optional and defaults to `with`.
+- `{{ value | filter arg }}`: pipe a value through one or more filters, e.g.
+  `{{ title | truncate 40 | upper }}`. Filters:
+  - `upper`, `lower`, `title`, `trim`, `reverse`
+  - `truncate N`, `truncatewords N`
+  - `replace old new`, `default value`
+  - `length`, `first`, `last`, `join sep`
+  - `slugify`, `striptags`, `urlencode`
+  - `round`, `abs`
+  - `pluralize singular plural` (picks one based on the piped count)
+  - `safe`: skip HTML-escaping, for use inside a filter chain instead of `&`
 
 Every page's front matter fields are available at the top level (`{{ title }}`),
 alongside `content` (the rendered body), `toc` (an `<li>` per `##` heading,
