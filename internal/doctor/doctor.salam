@@ -1,0 +1,32 @@
+package doctor
+
+import os
+import config "../config/config.salam"
+
+func check(label: str, ok: bool): bool:
+    if ok:
+        println "✓", label
+    else:
+        println "✗", label
+    end
+    ret ok
+end
+
+pub func Run(_args: Vector<str>):
+    site := config.Load("neyx.config.yml")
+
+    mut all_ok := true
+    if !check("neyx.config.yml present", os.Exists("neyx.config.yml")): all_ok = false end
+    if !check("content directory (" + site.content_dir + ")", os.IsDir(site.content_dir)): all_ok = false end
+    check("layouts directory (" + site.layouts_dir + ")", os.IsDir(site.layouts_dir))
+    check("git repository", os.IsDir(".git"))
+    if !check("salam compiler on PATH", os.Run("salam version --short >/dev/null 2>&1") == 0): all_ok = false end
+
+    println ""
+    if all_ok:
+        println "Everything looks good."
+    else:
+        println "Some checks failed - see above."
+        os.Exit(1)
+    end
+end
