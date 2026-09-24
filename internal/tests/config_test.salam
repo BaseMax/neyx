@@ -49,9 +49,31 @@ func test_hooks():
     os.Remove(path)
 end
 
+func test_wrong_types_fall_back_to_defaults():
+    path := os.TempDir() + "/neyx-config-test-badtypes.yml"
+    io.WriteFile(path, "pagination_size: \"five\"\ntitle: 123\ntaxonomies: \"not-a-list\"\n")
+    site := config.Load(path)
+    testing.AssertEqStr(site.title, "My Site")
+    testing.AssertEqInt(site.pagination_size, 10)
+    testing.AssertEqInt(site.taxonomies.len(), 1)
+    testing.AssertEqStr(site.taxonomies.get(0), "tags")
+    os.Remove(path)
+end
+
+func test_empty_file():
+    path := os.TempDir() + "/neyx-config-test-empty.yml"
+    io.WriteFile(path, "")
+    site := config.Load(path)
+    testing.AssertEqStr(site.title, "My Site")
+    testing.AssertEqStr(site.output, "dist")
+    os.Remove(path)
+end
+
 pub func Run():
     test_defaults_without_file()
     test_custom_values()
     test_taxonomies_and_languages()
     test_hooks()
+    test_wrong_types_fall_back_to_defaults()
+    test_empty_file()
 end

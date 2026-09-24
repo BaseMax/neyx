@@ -1,0 +1,185 @@
+package tmpledgetest
+
+import testing
+import encoding.value
+import tmpl "../tmpl/tmpl.salam"
+
+func nested_root(): value.Value:
+    mut root := value.NewValueObject()
+
+    mut post1 := value.NewValueObject()
+    value.ObjectSet(post1, "title", value.ValueString("First"))
+    mut post1_tags := value.NewValueArray()
+    value.ArrayPush(post1_tags, value.ValueString("go"))
+    value.ArrayPush(post1_tags, value.ValueString("web"))
+    value.ObjectSet(post1, "tags", post1_tags)
+
+    mut post2 := value.NewValueObject()
+    value.ObjectSet(post2, "title", value.ValueString("Second"))
+    mut post2_tags := value.NewValueArray()
+    value.ArrayPush(post2_tags, value.ValueString("rust"))
+    value.ObjectSet(post2, "tags", post2_tags)
+
+    mut posts := value.NewValueArray()
+    value.ArrayPush(posts, post1)
+    value.ArrayPush(posts, post2)
+    value.ObjectSet(root, "posts", posts)
+
+    mut row0 := value.NewValueArray()
+    value.ArrayPush(row0, value.ValueInt(1))
+    value.ArrayPush(row0, value.ValueInt(2))
+    mut row1 := value.NewValueArray()
+    value.ArrayPush(row1, value.ValueInt(3))
+    value.ArrayPush(row1, value.ValueInt(4))
+    mut matrix := value.NewValueArray()
+    value.ArrayPush(matrix, row0)
+    value.ArrayPush(matrix, row1)
+    value.ObjectSet(root, "matrix", matrix)
+
+    empty_arr := value.NewValueArray()
+    value.ObjectSet(root, "empty_arr", empty_arr)
+
+    mut single := value.NewValueArray()
+    value.ArrayPush(single, value.ValueString("only"))
+    value.ObjectSet(root, "single", single)
+
+    value.ObjectSet(root, "count", value.ValueInt(5))
+    value.ObjectSet(root, "flag", value.ValueBool(true))
+    value.ObjectSet(root, "word", value.ValueString("hello"))
+
+    ret root
+end
+
+func test_array_of_objects():
+    root := nested_root()
+    testing.AssertEqStr(tmpl.Render("{{ each p in posts }}[{{ p.title }}]{{ end }}", root, ""), "[First][Second]")
+    testing.AssertEqStr(tmpl.Render("{{ posts.0.title }}", root, ""), "First")
+    testing.AssertEqStr(tmpl.Render("{{ posts.1.title }}", root, ""), "Second")
+    testing.AssertEqStr(tmpl.Render("{{ posts.0.tags.0 }}", root, ""), "go")
+    testing.AssertEqStr(tmpl.Render("{{ posts.0.tags.1 }}", root, ""), "web")
+    testing.AssertEqStr(tmpl.Render("{{ posts.1.tags.0 }}", root, ""), "rust")
+    testing.AssertEqStr(tmpl.Render("{{ posts.1.tags.5 }}", root, ""), "")
+end
+
+func test_nested_each():
+    root := nested_root()
+    got := tmpl.Render("{{ each p in posts }}{{ p.title }}:{{ each t in p.tags }}{{ t }},{{ end }}|{{ end }}", root, "")
+    testing.AssertEqStr(got, "First:go,web,|Second:rust,|")
+end
+
+func test_each_with_filters_and_with():
+    root := nested_root()
+    got := tmpl.Render("{{ each p in posts }}{{ with p as cur }}{{ cur.title | upper }} {{ end }}{{ end }}", root, "")
+    testing.AssertEqStr(got, "FIRST SECOND ")
+end
+
+func test_matrix_index():
+    root := nested_root()
+    testing.AssertEqStr(tmpl.Render("{{ matrix.0.0 }}", root, ""), "1")
+    testing.AssertEqStr(tmpl.Render("{{ matrix.0.1 }}", root, ""), "2")
+    testing.AssertEqStr(tmpl.Render("{{ matrix.1.0 }}", root, ""), "3")
+    testing.AssertEqStr(tmpl.Render("{{ matrix.1.1 }}", root, ""), "4")
+    testing.AssertEqStr(tmpl.Render("{{ matrix.2.0 }}", root, ""), "")
+    got := tmpl.Render("{{ each row in matrix }}{{ each c in row }}{{ c }}{{ end }};{{ end }}", root, "")
+    testing.AssertEqStr(got, "12;34;")
+end
+
+func test_empty_and_single_arrays():
+    root := nested_root()
+    testing.AssertEqStr(tmpl.Render("{{ each x in empty_arr }}X{{ end }}", root, ""), "")
+    testing.AssertEqStr(tmpl.Render("{{ empty_arr | length }}", root, ""), "0")
+    testing.AssertEqStr(tmpl.Render("{{ empty_arr | first }}", root, ""), "")
+    testing.AssertEqStr(tmpl.Render("{{ empty_arr | last }}", root, ""), "")
+    testing.AssertEqStr(tmpl.Render("{{ each x in single }}{{ if loop.first }}F{{ end }}{{ if loop.last }}L{{ end }}{{ end }}", root, ""), "FL")
+end
+
+func test_invalid_path_segments():
+    root := nested_root()
+    testing.AssertEqStr(tmpl.Render("{{ posts.abc }}", root, ""), "")
+    testing.AssertEqStr(tmpl.Render("{{ posts.-1 }}", root, ""), "")
+    testing.AssertEqStr(tmpl.Render("{{ posts.1.5 }}", root, ""), "")
+    testing.AssertEqStr(tmpl.Render("{{ word.0 }}", root, ""), "")
+    testing.AssertEqStr(tmpl.Render("{{ nope.deeply.missing.chain }}", root, ""), "")
+    testing.AssertEqStr(tmpl.Render("{{ if nope.deeply.missing.chain }}yes{{ else }}no{{ end }}", root, ""), "no")
+end
+
+func test_filters_on_wrong_types():
+    root := nested_root()
+    testing.AssertEqStr(tmpl.Render("{{ count | upper }}", root, ""), "5")
+    testing.AssertEqStr(tmpl.Render("{{ flag | upper }}", root, ""), "TRUE")
+    testing.AssertEqStr(tmpl.Render("{{ count | length }}", root, ""), "1")
+    testing.AssertEqStr(tmpl.Render("{{ word | length }}", root, ""), "5")
+    testing.AssertEqStr(tmpl.Render("{{ word | join \",\" }}", root, ""), "hello")
+    testing.AssertEqStr(tmpl.Render("{{ word | sort }}", root, ""), "hello")
+    testing.AssertEqStr(tmpl.Render("{{ word | unique }}", root, ""), "hello")
+    testing.AssertEqStr(tmpl.Render("{{ word | nth 0 }}", root, ""), "")
+    testing.AssertEqStr(tmpl.Render("{{ count | nth 0 }}", root, ""), "")
+    testing.AssertEqStr(tmpl.Render("{{ posts | truncate 3 }}", root, ""), "")
+    testing.AssertEqStr(tmpl.Render("{{ posts | upper }}", root, ""), "")
+    testing.AssertEqStr(tmpl.Render("{{ word | keys }}", root, ""), "")
+end
+
+func test_numeric_filters_on_bad_input():
+    root := nested_root()
+    testing.AssertEqStr(tmpl.Render("{{ word | add 3 }}", root, ""), "3")
+    testing.AssertEqStr(tmpl.Render("{{ word | abs }}", root, ""), "0")
+    testing.AssertEqStr(tmpl.Render("{{ count | div 0 }}", root, ""), "0")
+    testing.AssertEqStr(tmpl.Render("{{ count | mul 0 }}", root, ""), "0")
+    testing.AssertEqStr(tmpl.Render("{{ -5 | abs }}", root, ""), "5")
+    testing.AssertEqStr(tmpl.Render("{{ empty_arr | min }}", root, ""), "")
+    testing.AssertEqStr(tmpl.Render("{{ empty_arr | max }}", root, ""), "")
+end
+
+func test_filters_missing_args():
+    root := nested_root()
+    testing.AssertEqStr(tmpl.Render("{{ word | replace }}", root, ""), "hello")
+    testing.AssertEqStr(tmpl.Render("{{ word | truncate }}", root, ""), "...")
+    testing.AssertEqStr(tmpl.Render("{{ word | default }}", root, ""), "hello")
+    testing.AssertEqStr(tmpl.Render("{{ empty_arr | join }}", root, ""), "")
+    testing.AssertEqStr(tmpl.Render("{{ word | nth }}", root, ""), "")
+end
+
+func test_type_mismatched_comparisons():
+    root := nested_root()
+    testing.AssertEqStr(tmpl.Render("{{ if count == \"5\" }}eq{{ else }}neq{{ end }}", root, ""), "neq")
+    testing.AssertEqStr(tmpl.Render("{{ if count != \"5\" }}neq{{ else }}eq{{ end }}", root, ""), "neq")
+    testing.AssertEqStr(tmpl.Render("{{ if count > \"abc\" }}yes{{ else }}no{{ end }}", root, ""), "no")
+    testing.AssertEqStr(tmpl.Render("{{ if word > count }}yes{{ else }}no{{ end }}", root, ""), "no")
+    testing.AssertEqStr(tmpl.Render("{{ if flag == true }}yes{{ else }}no{{ end }}", root, ""), "yes")
+    testing.AssertEqStr(tmpl.Render("{{ if flag == false }}yes{{ else }}no{{ end }}", root, ""), "no")
+    testing.AssertEqStr(tmpl.Render("{{ if count == 5 }}yes{{ else }}no{{ end }}", root, ""), "yes")
+    testing.AssertEqStr(tmpl.Render("{{ if count == 5.0 }}yes{{ else }}no{{ end }}", root, ""), "no")
+end
+
+func test_deep_filter_chains():
+    root := nested_root()
+    testing.AssertEqStr(tmpl.Render("{{ posts.0.tags | join \",\" | upper | truncate 5 }}", root, ""), "GO,WE...")
+    testing.AssertEqStr(tmpl.Render("{{ matrix.1 | join \"-\" }}", root, ""), "3-4")
+    testing.AssertEqStr(tmpl.Render("{{ word | upper | lower | title | trim }}", root, ""), "Hello")
+    testing.AssertEqStr(tmpl.Render("{{ posts | length | add 10 }}", root, ""), "12")
+end
+
+func test_malformed_templates_do_not_crash():
+    root := nested_root()
+    testing.AssertEqStr(tmpl.Render("{{ if x }}unterminated", root, ""), "")
+    testing.AssertEqStr(tmpl.Render("{{ each x in }}body{{ end }}", root, ""), "")
+    testing.AssertEqStr(tmpl.Render("{{ }}", root, ""), "")
+    testing.AssertEqStr(tmpl.Render("{{ | upper }}", root, ""), "")
+    testing.AssertEqStr(tmpl.Render("plain {{ unclosed", root, ""), "plain {{ unclosed")
+    testing.AssertEqStr(tmpl.Render("", root, ""), "")
+end
+
+pub func Run():
+    test_array_of_objects()
+    test_nested_each()
+    test_each_with_filters_and_with()
+    test_matrix_index()
+    test_empty_and_single_arrays()
+    test_invalid_path_segments()
+    test_filters_on_wrong_types()
+    test_numeric_filters_on_bad_input()
+    test_filters_missing_args()
+    test_type_mismatched_comparisons()
+    test_deep_filter_chains()
+    test_malformed_templates_do_not_crash()
+end

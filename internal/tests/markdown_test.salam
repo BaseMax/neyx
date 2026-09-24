@@ -54,6 +54,24 @@ func test_escape_html():
     testing.AssertEqStr(esc.EscapeHtml("plain"), "plain")
 end
 
+func test_empty_and_malformed_input():
+    mut toc := ""
+    mut html := ""
+    markdown.ToHtml("", toc, html)
+    testing.AssertEqStr(html, "")
+    testing.AssertEqStr(toc, "")
+
+    mut toc2 := ""
+    mut html2 := ""
+    markdown.ToHtml("```\nunclosed fence\n", toc2, html2)
+    testing.AssertContains(html2, "unclosed fence")
+
+    mut toc3 := ""
+    mut html3 := ""
+    markdown.ToHtml("# \n\n\n\n", toc3, html3)
+    testing.AssertContains(html3, "<h1")
+end
+
 pub func Run():
     test_headings_and_toc()
     test_lists_and_inline()
@@ -61,4 +79,5 @@ pub func Run():
     test_slugify()
     test_inline_html()
     test_escape_html()
+    test_empty_and_malformed_input()
 end
