@@ -29,7 +29,8 @@ neyx preview
 
 | Command | Description |
 | --- | --- |
-| `neyx new <name>` | Scaffold a new project |
+| `neyx new <name>` | Scaffold a new project in a new directory |
+| `neyx init` | Scaffold a project in the current (empty) directory |
 | `neyx new post <title>` | Create a new dated post under `content/posts/` |
 | `neyx build [--drafts] [--pretty] [--no-images] [--json]` | Build the site into the output directory |
 | `neyx dev [--port] [--drafts]` | Build and serve the site |
