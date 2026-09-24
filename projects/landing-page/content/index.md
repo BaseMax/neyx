@@ -5,7 +5,7 @@ description: "Ship your next idea in an afternoon."
 
 <section class="hero">
 <h1>Ship your next idea in an afternoon.</h1>
-<p>Launchpad is a fictional product. Everything on this page comes from <code>themes/simple/</code>, not this project's own <code>layouts/</code> or <code>assets/</code> — because this project doesn't have any.</p>
+<p>Launchpad is a fictional product. Everything on this page comes from <code>themes/simple/</code>, not this project's own <code>layouts/</code> or <code>assets/</code>, because this project doesn't have any.</p>
 <a class="cta" href="#pricing">See pricing</a>
 </section>
 

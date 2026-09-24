@@ -2,7 +2,7 @@
 
 Five small, real Neyx projects, each built and checked with
 `neyx build` / `neyx check` and showing a different slice of what Neyx
-does. Every one is self-contained — `cd` into it and run `neyx build`
+does. Every one is self-contained: `cd` into it and run `neyx build`
 or `neyx dev`.
 
 | Project | Shows |

@@ -7,7 +7,7 @@ A single-language blog with tags, pagination, and feeds.
 - A dated `posts/` collection, sorted newest first automatically
 - Tag taxonomy (`tags: [...]` in front matter) generating `/tags/<tag>/`
   and `/tags/` pages, linked from each post
-- Pagination (`paginate: true` + `pagination_size: 3` in the config) —
+- Pagination (`paginate: true` + `pagination_size: 3` in the config):
   6 posts split across `/`, `/page/2/`
 - A draft post (`draft: true`) excluded from a normal build; run
   `neyx build --drafts` or `neyx dev --drafts` to include it
