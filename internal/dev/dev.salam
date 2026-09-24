@@ -1,9 +1,22 @@
 package dev
 
 import os
+import str
 import flag
 import buildcmd "../build/builder.salam"
 import config "../config/config.salam"
+
+func watch_paths(site: config.Site): str:
+    mut parts := Vector {} as Vector<str>
+    parts.push(site.content_dir)
+    parts.push(site.layouts_dir)
+    if os.IsDir(site.assets_dir): parts.push(site.assets_dir) end
+    if os.IsDir(site.data_dir): parts.push(site.data_dir) end
+    if os.IsDir(site.static_dir): parts.push(site.static_dir) end
+    if site.theme != "" && os.IsDir("themes/" + site.theme): parts.push("themes/" + site.theme) end
+    parts.push("neyx.config.yml")
+    ret str.Join(parts, " ")
+end
 
 pub func Run(args: Vector<str>):
     mut fs := flag.New("neyx dev", "Start the development server")
@@ -11,17 +24,45 @@ pub func Run(args: Vector<str>):
     flag.AddBool(fs, "drafts", "", false, "Include draft content")
     flag.Parse(fs, args)
 
+    include_drafts := flag.GetBool(fs, "drafts")
+
     mut build_args := Vector {} as Vector<str>
     build_args.push("--pretty")
     build_args.push("--no-images")
-    if flag.GetBool(fs, "drafts"):
+    if include_drafts:
         build_args.push("--drafts")
     end
     buildcmd.Run(build_args)
 
     site := config.Load("neyx.config.yml")
     port := flag.GetStr(fs, "port")
+
+    mut build_cmd := "neyx build --pretty --no-images"
+    if include_drafts:
+        build_cmd = build_cmd + " --drafts"
+    end
+
+    watch := watch_paths(site)
+    stamp := "/tmp/.neyx-dev-stamp-$$"
+
+    mut script := ""
+    script = script + "touch " + stamp + "\n"
+    script = script + "(while true; do\n"
+    script = script + "  changed=$(find " + watch + " -newer " + stamp + " 2>/dev/null)\n"
+    script = script + "  if [ -n \"$changed\" ]; then\n"
+    script = script + "    touch " + stamp + "\n"
+    script = script + "    echo \"\"\n"
+    script = script + "    echo \"Change detected, rebuilding...\"\n"
+    script = script + "    " + build_cmd + "\n"
+    script = script + "  fi\n"
+    script = script + "  sleep 1\n"
+    script = script + "done) &\n"
+    script = script + "watch_pid=$!\n"
+    script = script + "trap \"kill $watch_pid 2>/dev/null; rm -f " + stamp + "\" EXIT\n"
+    script = script + "salam serve " + site.output + " --port=" + port + "\n"
+
     println ""
     println "Serving", site.output, "at http://localhost:" + port
-    os.Run("salam serve " + site.output + " --port=" + port)
+    println "Watching for changes (Ctrl+C to stop)..."
+    os.Run(script)
 end
