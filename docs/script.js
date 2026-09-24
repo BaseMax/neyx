@@ -5,6 +5,28 @@
 
   document.getElementById("year").textContent = new Date().getFullYear();
 
+  var THEME_KEY = "neyx-theme";
+  var themeToggle = document.getElementById("theme-toggle");
+
+  function currentTheme() {
+    return document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark";
+  }
+
+  function setTheme(theme) {
+    document.documentElement.setAttribute("data-theme", theme);
+    try { localStorage.setItem(THEME_KEY, theme); } catch (e) {}
+    if (themeToggle) {
+      themeToggle.setAttribute("aria-label", theme === "light" ? "Switch to dark theme" : "Switch to light theme");
+    }
+  }
+
+  if (themeToggle) {
+    setTheme(currentTheme());
+    themeToggle.addEventListener("click", function () {
+      setTheme(currentTheme() === "light" ? "dark" : "light");
+    });
+  }
+
   function detectOS() {
     var ua = navigator.userAgent || "";
     var platform = navigator.platform || "";
