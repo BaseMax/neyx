@@ -100,7 +100,7 @@
     });
   }
 
-  var sections = ["features", "speed", "commands", "download"]
+  var sections = ["features", "speed", "examples", "commands", "download"]
     .map(function (id) { return document.getElementById(id); })
     .filter(Boolean);
   var navLinks = Array.prototype.slice.call(document.querySelectorAll(".site-nav a[href^='#']"));
