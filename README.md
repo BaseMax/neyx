@@ -206,9 +206,15 @@ Welcome to my site.
 </ul>
 ```
 
-- `{{ path.to.value }}`: HTML-escaped output.
+- `{{ path.to.value }}`: HTML-escaped output. Also accepts a literal string
+  (`"..."`/`'...'`), number, or `true`/`false` in place of a path.
+- `{{ path.0 }}` / `{{ path.2.name }}`: numeric path segments index into
+  arrays, so a field holding a list can be reached into directly.
 - `{{ & path }}`: raw, unescaped output (used for rendered page content).
 - `{{! a comment }}`: removed entirely from output.
+- `{{ set name = expr }}`: binds `name` to `expr` (a path, literal, or filter
+  chain) for the rest of the current block, including nested blocks that
+  follow it; it does not leak past the `{{ end }}` of whatever block it's in.
 - `{{ if cond }} ... {{ else }} ... {{ end }}`: conditional. `cond` can be a bare
   path (truthy), `!path` (falsy), a comparison (`a == b`, `a != b`, `a > b`,
   `a < b`, `a >= b`, `a <= b`, against a literal string, number, `true`/`false`,
@@ -220,14 +226,18 @@ Welcome to my site.
 - `{{ with path as name }} ... {{ else }} ... {{ end }}`: if `path` is truthy,
   renders the body with `name` bound to it; otherwise renders the `else`
   branch. `as name` is optional and defaults to `with`.
+- `{{ include "partial.html" }}`: parses and renders another file from your
+  `layouts/` directory in place, sharing the current context and any `set`
+  variables already in scope. Partials can themselves include others, up to
+  a depth of 32.
 - `{{ value | filter arg }}`: pipe a value through one or more filters, e.g.
   `{{ title | truncate 40 | upper }}`. Filters:
-  - `upper`, `lower`, `title`, `trim`, `reverse`
+  - `upper`, `lower`, `title`, `capitalize`, `trim`, `reverse`, `sort`, `unique`
   - `truncate N`, `truncatewords N`
-  - `replace old new`, `default value`
-  - `length`, `first`, `last`, `join sep`
-  - `slugify`, `striptags`, `urlencode`
-  - `round`, `abs`
+  - `replace old new`, `default value`, `split sep`
+  - `length`, `first`, `last`, `nth N`, `join sep`, `keys`, `min`, `max`
+  - `add N`, `sub N`, `mul N`, `div N`, `round`, `abs`
+  - `slugify`, `striptags`, `urlencode`, `json`
   - `pluralize singular plural` (picks one based on the piped count)
   - `safe`: skip HTML-escaping, for use inside a filter chain instead of `&`
 

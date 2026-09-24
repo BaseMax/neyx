@@ -91,7 +91,7 @@ func write_term_page(site: config.Site, field: str, term: str, pages: Vector<p.P
     value.ObjectSet(root, "site", site.data)
 
     tpl_text := layout_or(site, field + "-term", DEFAULT_TERM_LAYOUT)
-    mut html := tmpl.Render(tpl_text, root)
+    mut html := tmpl.Render(tpl_text, root, site.layouts_dir)
     if do_minify: html = minify.Html(html) end
 
     dir := site.output + "/" + field + "/" + slug + "/"
@@ -124,7 +124,7 @@ func write_index_page(site: config.Site, field: str, terms: Vector<str>, pages: 
     value.ObjectSet(root, "site", site.data)
 
     tpl_text := layout_or(site, field, DEFAULT_INDEX_LAYOUT)
-    mut html := tmpl.Render(tpl_text, root)
+    mut html := tmpl.Render(tpl_text, root, site.layouts_dir)
     if do_minify: html = minify.Html(html) end
 
     dir := site.output + "/" + field + "/"

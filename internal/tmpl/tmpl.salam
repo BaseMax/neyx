@@ -1,9 +1,13 @@
 package tmpl
 
+import os
+import io
 import str
 import conv
 import math
+import collections
 import encoding
+import encoding.json
 import encoding.value
 import esc "../markdown/escape.salam"
 import blk "../markdown/blocks.salam"
@@ -14,6 +18,8 @@ pub const NodeRaw := 2
 pub const NodeIf := 3
 pub const NodeEach := 4
 pub const NodeWith := 5
+pub const NodeInclude := 6
+pub const NodeSet := 7
 
 pub struct FilterCall:
     pub name: str = ""
@@ -153,6 +159,17 @@ func parse_pipeline(expr: str, path_out &: str, filters_out &: Vector<FilterCall
     segments.free()
 end
 
+func unquote(s: str): str:
+    n := s.len()
+    if n >= 2 && str.StartsWith(s, "\"") && str.EndsWith(s, "\""):
+        ret s.substr(1, n - 2)
+    end
+    if n >= 2 && str.StartsWith(s, "'") && str.EndsWith(s, "'"):
+        ret s.substr(1, n - 2)
+    end
+    ret s
+end
+
 func parse_nodes(t: str, pos &: int, ended &: str): Vector<Node>:
     mut nodes := Vector {} as Vector<Node>
     n := t.len()
@@ -266,6 +283,34 @@ func parse_nodes(t: str, pos &: int, ended &: str): Vector<Node>:
             continue
         end
 
+        if str.StartsWith(tag, "set "):
+            rest := str.Trim(tag.substr(4, tag.len() - 4))
+            eq_idx := str.IndexOf(rest, "=")
+            mut var_name := rest
+            mut expr := ""
+            if eq_idx > 0:
+                var_name = str.Trim(rest.substr(0, eq_idx))
+                expr = str.Trim(rest.substr(eq_idx + 1, rest.len() - eq_idx - 1))
+            end
+            mut node := Node { kind = NodeSet }
+            node.with_name = var_name
+            mut path := ""
+            parse_pipeline(expr, path, node.filters)
+            node.path = path
+            nodes.push(node)
+            pos = tend
+            continue
+        end
+
+        if str.StartsWith(tag, "include "):
+            rest := str.Trim(tag.substr(8, tag.len() - 8))
+            mut node := Node { kind = NodeInclude }
+            node.path = unquote(rest)
+            nodes.push(node)
+            pos = tend
+            continue
+        end
+
         if str.StartsWith(tag, "&"):
             expr := str.Trim(tag.substr(1, tag.len() - 1))
             mut node := Node { kind = NodeRaw }
@@ -286,6 +331,18 @@ func parse_nodes(t: str, pos &: int, ended &: str): Vector<Node>:
     end
     ended = ""
     ret nodes
+end
+
+func is_index(s: str): bool:
+    if s == "": ret false end
+    n := s.len()
+    mut i := 0
+    while i < n:
+        c := s.substr(i, 1)
+        if c < "0" || c > "9": ret false end
+        i += 1
+    end
+    ret true
 end
 
 func lookup(root: value.Value, scopes: Vector<Frame>, path: str): value.Value:
@@ -317,10 +374,19 @@ func lookup(root: value.Value, scopes: Vector<Frame>, path: str): value.Value:
     mut cur := base
     mut j := start_idx
     while j < parts.len():
-        if !value.IsObject(cur): ret value.Value {} end
-        mut ok := false
-        cur = value.ObjectGetOk(cur, parts.get(j), ok)
-        if !ok: ret value.Value {} end
+        seg := parts.get(j)
+        if value.IsArray(cur):
+            if !is_index(seg): ret value.Value {} end
+            idx := conv.Atoi(seg)
+            if idx < 0 || idx >= value.ArrayLen(cur): ret value.Value {} end
+            cur = value.ArrayGet(cur, idx)
+        else value.IsObject(cur):
+            mut ok := false
+            cur = value.ObjectGetOk(cur, seg, ok)
+            if !ok: ret value.Value {} end
+        else:
+            ret value.Value {}
+        end
         j += 1
     end
     ret cur
@@ -436,8 +502,12 @@ end
 func eval_atom(root: value.Value, scopes: Vector<Frame>, atom: str): bool:
     a := str.Trim(atom)
     if a == "": ret false end
+    if a == "true": ret true end
+    if a == "false": ret false end
     if str.StartsWith(a, "!"):
         inner := str.Trim(a.substr(1, a.len() - 1))
+        if inner == "true": ret false end
+        if inner == "false": ret true end
         ret !truthy(lookup(root, scopes, inner))
     end
 
@@ -555,6 +625,70 @@ func strip_tags(s: str): str:
     ret str.BufStr(sb)
 end
 
+func numeric_op(v: value.Value, arg: str, op: str): value.Value:
+    if value.IsInt(v) && !str.Contains(arg, "."):
+        a := value.AsInt(v)
+        b := conv.ParseInt(arg)
+        if op == "add": ret value.ValueInt(a + b) end
+        if op == "sub": ret value.ValueInt(a - b) end
+        if op == "mul": ret value.ValueInt(a * b) end
+        if b == 0: ret value.ValueInt(0) end
+        ret value.ValueInt(a / b)
+    end
+    a := as_number(v)
+    b := conv.ParseFloat(arg)
+    if op == "add": ret value.ValueFloat(a + b) end
+    if op == "sub": ret value.ValueFloat(a - b) end
+    if op == "mul": ret value.ValueFloat(a * b) end
+    if b == 0.0: ret value.ValueFloat(0.0) end
+    ret value.ValueFloat(a / b)
+end
+
+func value_less(a: value.Value, b: value.Value): bool:
+    if value.IsNumber(a) && value.IsNumber(b): ret as_number(a) < as_number(b) end
+    ret to_str(a) < to_str(b)
+end
+
+func sort_values(v: value.Value): value.Value:
+    if !value.IsArray(v): ret v end
+    n := value.ArrayLen(v)
+    mut out := value.NewValueArray()
+    repeat n with i:
+        value.ArrayPush(out, value.ArrayGet(v, i))
+    end
+    mut a := 1
+    while a < n:
+        mut j := a
+        while j > 0 && value_less(value.ArrayGet(out, j), value.ArrayGet(out, j - 1)):
+            tmp := value.ArrayGet(out, j)
+            value.ArraySet(out, j, value.ArrayGet(out, j - 1))
+            value.ArraySet(out, j - 1, tmp)
+            j -= 1
+        end
+        a += 1
+    end
+    ret out
+end
+
+func unique_values(v: value.Value): value.Value:
+    if !value.IsArray(v): ret v end
+    n := value.ArrayLen(v)
+    mut out := value.NewValueArray()
+    mut seen := Vector {} as Vector<str>
+    defer seen.free()
+    mut i := 0
+    while i < n:
+        item := value.ArrayGet(v, i)
+        key := to_str(item)
+        if !collections.contains(seen, key):
+            seen.push(key)
+            value.ArrayPush(out, item)
+        end
+        i += 1
+    end
+    ret out
+end
+
 func apply_filter(v: value.Value, fc: FilterCall, safe_out &: bool): value.Value:
     name := fc.name
 
@@ -565,6 +699,11 @@ func apply_filter(v: value.Value, fc: FilterCall, safe_out &: bool): value.Value
     if name == "upper": ret value.ValueString(str.Upper(to_str(v))) end
     if name == "lower": ret value.ValueString(str.Lower(to_str(v))) end
     if name == "title": ret value.ValueString(str.Title(to_str(v))) end
+    if name == "capitalize":
+        s := to_str(v)
+        if s.len() == 0: ret value.ValueString("") end
+        ret value.ValueString(str.Upper(s.substr(0, 1)) + str.Lower(s.substr(1, s.len() - 1)))
+    end
     if name == "trim": ret value.ValueString(str.Trim(to_str(v))) end
     if name == "reverse":
         if value.IsArray(v):
@@ -579,6 +718,8 @@ func apply_filter(v: value.Value, fc: FilterCall, safe_out &: bool): value.Value
         end
         ret value.ValueString(str.Reverse(to_str(v)))
     end
+    if name == "sort": ret sort_values(v) end
+    if name == "unique": ret unique_values(v) end
     if name == "length":
         if value.IsArray(v): ret value.ValueInt(value.ArrayLen(v) as i64) end
         if value.IsObject(v): ret value.ValueInt(value.ObjectLen(v) as i64) end
@@ -603,6 +744,49 @@ func apply_filter(v: value.Value, fc: FilterCall, safe_out &: bool): value.Value
         if s.len() == 0: ret value.ValueString("") end
         ret value.ValueString(s.substr(s.len() - 1, 1))
     end
+    if name == "nth":
+        idx := conv.Atoi(filter_arg(fc, 0, "0"))
+        if value.IsArray(v):
+            if idx < 0 || idx >= value.ArrayLen(v): ret value.Value {} end
+            ret value.ArrayGet(v, idx)
+        end
+        ret value.Value {}
+    end
+    if name == "keys":
+        if value.IsObject(v):
+            names := value.ObjectKeys(v)
+            mut out := value.NewValueArray()
+            repeat names.len() with i:
+                value.ArrayPush(out, value.ValueString(names.get(i)))
+            end
+            names.free()
+            ret out
+        end
+        ret value.NewValueArray()
+    end
+    if name == "min" || name == "max":
+        if value.IsArray(v):
+            len := value.ArrayLen(v)
+            if len == 0: ret value.Value {} end
+            mut best := as_number(value.ArrayGet(v, 0))
+            mut i := 1
+            while i < len:
+                x := as_number(value.ArrayGet(v, i))
+                if name == "min":
+                    if x < best: best = x end
+                else:
+                    if x > best: best = x end
+                end
+                i += 1
+            end
+            ret value.ValueFloat(best)
+        end
+        ret v
+    end
+    if name == "add": ret numeric_op(v, filter_arg(fc, 0, "0"), "add") end
+    if name == "sub": ret numeric_op(v, filter_arg(fc, 0, "0"), "sub") end
+    if name == "mul": ret numeric_op(v, filter_arg(fc, 0, "0"), "mul") end
+    if name == "div": ret numeric_op(v, filter_arg(fc, 0, "1"), "div") end
     if name == "join":
         sep := filter_arg(fc, 0, ",")
         if value.IsArray(v):
@@ -615,6 +799,16 @@ func apply_filter(v: value.Value, fc: FilterCall, safe_out &: bool): value.Value
             ret value.ValueString(joined)
         end
         ret v
+    end
+    if name == "split":
+        sep := filter_arg(fc, 0, " ")
+        parts := str.Split(to_str(v), sep)
+        mut out := value.NewValueArray()
+        repeat parts.len() with i:
+            value.ArrayPush(out, value.ValueString(parts.get(i)))
+        end
+        parts.free()
+        ret out
     end
     if name == "truncate":
         limit := conv.Atoi(filter_arg(fc, 0, "0"))
@@ -653,6 +847,7 @@ func apply_filter(v: value.Value, fc: FilterCall, safe_out &: bool): value.Value
     if name == "slugify": ret value.ValueString(blk.Slugify(to_str(v))) end
     if name == "striptags": ret value.ValueString(strip_tags(to_str(v))) end
     if name == "urlencode": ret value.ValueString(encoding.URLEncode(to_str(v))) end
+    if name == "json": ret value.ValueString(json.EncodeDefault(v)) end
     if name == "round": ret value.ValueInt(math.Round(as_number(v)) as i64) end
     if name == "abs":
         if value.IsInt(v): ret value.ValueInt(math.AbsI64(value.AsInt(v))) end
@@ -677,13 +872,14 @@ func apply_filters(v: value.Value, filters: Vector<FilterCall>, safe_out &: bool
     ret cur
 end
 
-func render_nodes(nodes: Vector<Node>, root: value.Value, scopes &: Vector<Frame>, out &: str.StringBuilder):
+func render_nodes(nodes: Vector<Node>, root: value.Value, scopes &: Vector<Frame>, out &: str.StringBuilder, layouts_dir: str, depth: int):
+    mut set_count := 0
     repeat nodes.len() with i:
         node := nodes.get(i)
         if node.kind == NodeText:
             str.BufAppend(out, node.text)
         else node.kind == NodeVar:
-            v := lookup(root, scopes, node.path)
+            v := parse_literal(root, scopes, node.path)
             mut safe := false
             v2 := apply_filters(v, node.filters, safe)
             s := to_str(v2)
@@ -693,16 +889,16 @@ func render_nodes(nodes: Vector<Node>, root: value.Value, scopes &: Vector<Frame
                 str.BufAppend(out, esc.EscapeHtml(s))
             end
         else node.kind == NodeRaw:
-            v := lookup(root, scopes, node.path)
+            v := parse_literal(root, scopes, node.path)
             mut safe := false
             v2 := apply_filters(v, node.filters, safe)
             str.BufAppend(out, to_str(v2))
         else node.kind == NodeIf:
             cond := eval_cond(root, scopes, node.path)
             if cond:
-                render_nodes(node.body, root, scopes, out)
+                render_nodes(node.body, root, scopes, out, layouts_dir, depth)
             else:
-                render_nodes(node.else_body, root, scopes, out)
+                render_nodes(node.else_body, root, scopes, out, layouts_dir, depth)
             end
         else node.kind == NodeEach:
             v := lookup(root, scopes, node.path)
@@ -729,7 +925,7 @@ func render_nodes(nodes: Vector<Node>, root: value.Value, scopes &: Vector<Frame
                     loop_frame.val = loop_obj
                     scopes.push(loop_frame)
 
-                    render_nodes(node.body, root, scopes, out)
+                    render_nodes(node.body, root, scopes, out, layouts_dir, depth)
 
                     _d1 := scopes.pop()
                     if has_idx:
@@ -744,12 +940,32 @@ func render_nodes(nodes: Vector<Node>, root: value.Value, scopes &: Vector<Frame
                 mut frame := Frame { name = node.with_name }
                 frame.val = v
                 scopes.push(frame)
-                render_nodes(node.body, root, scopes, out)
+                render_nodes(node.body, root, scopes, out, layouts_dir, depth)
                 _d := scopes.pop()
             else:
-                render_nodes(node.else_body, root, scopes, out)
+                render_nodes(node.else_body, root, scopes, out, layouts_dir, depth)
+            end
+        else node.kind == NodeSet:
+            v := parse_literal(root, scopes, node.path)
+            mut safe := false
+            v2 := apply_filters(v, node.filters, safe)
+            mut frame := Frame { name = node.with_name }
+            frame.val = v2
+            scopes.push(frame)
+            set_count += 1
+        else node.kind == NodeInclude:
+            if depth < 32 && layouts_dir != "":
+                full_path := layouts_dir + "/" + node.path
+                if os.Exists(full_path):
+                    partial_text := io.ReadFile(full_path)
+                    partial_nodes := Parse(partial_text)
+                    render_nodes(partial_nodes, root, scopes, out, layouts_dir, depth + 1)
+                end
             end
         end
+    end
+    repeat set_count with _:
+        _d := scopes.pop()
     end
 end
 
@@ -759,12 +975,12 @@ pub func Parse(t: str): Vector<Node>:
     ret parse_nodes(t, pos, ended)
 end
 
-pub func Render(t: str, root: value.Value): str:
+pub func Render(t: str, root: value.Value, layouts_dir: str): str:
     nodes := Parse(t)
     mut scopes := Vector {} as Vector<Frame>
     defer scopes.free()
     mut out := str.NewBuilder()
     defer str.BufFree(out)
-    render_nodes(nodes, root, scopes, out)
+    render_nodes(nodes, root, scopes, out, layouts_dir, 0)
     ret str.BufStr(out)
 end

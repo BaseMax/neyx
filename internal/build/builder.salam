@@ -130,7 +130,7 @@ func render_page(site: config.Site, page: p.Page, pages: Vector<p.Page>, posts: 
     value.ObjectSet(root, "dir", value.ValueString(text_dir(lang)))
     value.ObjectSet(root, "translations", translations_for(page, pages))
     tpl_text := layout_for(site, page.tmpl)
-    ret tmpl.Render(tpl_text, root)
+    ret tmpl.Render(tpl_text, root, site.layouts_dir)
 end
 
 func write_page(site: config.Site, page: p.Page, pages: Vector<p.Page>, posts: Vector<p.Page>, data_val: value.Value, do_minify: bool, quiet: bool):
@@ -204,7 +204,7 @@ func write_paginated(site: config.Site, page: p.Page, pages: Vector<p.Page>, pos
         value.ObjectSet(root, "pagination", pg)
 
         tpl_text := layout_for(site, page.tmpl)
-        mut html := tmpl.Render(tpl_text, root)
+        mut html := tmpl.Render(tpl_text, root, site.layouts_dir)
         if do_minify: html = minify.Html(html) end
 
         dir := site.output + route
