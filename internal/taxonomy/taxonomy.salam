@@ -2,6 +2,7 @@ package taxonomy
 
 import os
 import io
+import str
 import collections
 import encoding.value
 import config "../config/config.salam"
@@ -31,9 +32,10 @@ func has_tag(page: p.Page, tag: str): bool:
     tags_val := value.ObjectGetOk(page.front, "tags", ok)
     if !ok || !value.IsArray(tags_val): ret false end
     mut found := false
+    lower_tag := str.Lower(tag)
     repeat value.ArrayLen(tags_val) with j:
         item := value.ArrayGet(tags_val, j)
-        if value.IsString(item) && value.AsString(item) == tag:
+        if value.IsString(item) && str.Lower(value.AsString(item)) == lower_tag:
             found = true
         end
     end
@@ -42,6 +44,8 @@ end
 
 func collect_tags(pages: Vector<p.Page>): Vector<str>:
     mut out := Vector {} as Vector<str>
+    mut seen_lower := Vector {} as Vector<str>
+    defer seen_lower.free()
     repeat pages.len() with i:
         page := pages.get(i)
         mut ok := false
@@ -51,7 +55,9 @@ func collect_tags(pages: Vector<p.Page>): Vector<str>:
                 item := value.ArrayGet(tags_val, j)
                 if value.IsString(item):
                     tag := value.AsString(item)
-                    if !collections.contains(out, tag):
+                    lower := str.Lower(tag)
+                    if !collections.contains(seen_lower, lower):
+                        seen_lower.push(lower)
                         out.push(tag)
                     end
                 end
