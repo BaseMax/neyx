@@ -46,6 +46,27 @@ pub func InlineHtml(text: str): str:
                 str.BufAppend(sb, "</em>")
                 i = close + 1
             end
+        else c == "!" && i + 1 < n && text.substr(i + 1, 1) == "[":
+            close_bracket := str.IndexFrom(text, "]", i + 2)
+            mut handled := false
+            if close_bracket >= 0 && close_bracket + 1 < n && text.substr(close_bracket + 1, 1) == "(":
+                close_paren := str.IndexFrom(text, ")", close_bracket + 2)
+                if close_paren >= 0:
+                    alt := text.substr(i + 2, close_bracket - i - 2)
+                    url := text.substr(close_bracket + 2, close_paren - close_bracket - 2)
+                    str.BufAppend(sb, "<img src=\"")
+                    str.BufAppend(sb, esc.EscapeHtml(url))
+                    str.BufAppend(sb, "\" alt=\"")
+                    str.BufAppend(sb, esc.EscapeHtml(alt))
+                    str.BufAppend(sb, "\">")
+                    i = close_paren + 1
+                    handled = true
+                end
+            end
+            if !handled:
+                str.BufAppend(sb, "!")
+                i += 1
+            end
         else c == "[":
             close_bracket := str.IndexFrom(text, "]", i + 1)
             mut handled := false
