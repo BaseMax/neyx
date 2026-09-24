@@ -32,7 +32,7 @@ func load_page(dir: str, path: str): p.Page:
     text := io.ReadFile(path)
     mut front := page.front
     mut body := ""
-    fm.Split(text, front, body)
+    fm.Split(path, text, front, body)
     page.front = front
 
     page.tmpl = p.StrField(page.front, "layout", "default")

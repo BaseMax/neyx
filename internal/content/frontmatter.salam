@@ -6,7 +6,7 @@ import encoding.value
 import encoding.encerr
 import encoding.yaml
 
-pub func Split(text: str, front_out &: value.Value, body_out &: str):
+pub func Split(path: str, text: str, front_out &: value.Value, body_out &: str):
     lines := str.Split(text, "\n")
     defer lines.free()
     n := lines.len()
@@ -43,9 +43,14 @@ pub func Split(text: str, front_out &: value.Value, body_out &: str):
 
     mut err := encerr.NoError()
     fm := yaml.Decode(fm_text, err)
-    if err.kind != encerr.KindNone || !value.IsObject(fm):
+    if err.kind != encerr.KindNone:
+        printerrln "neyx: warning: could not parse front matter in", path, "-", err.message
         front_out = value.Value {}
     else:
-        front_out = fm
+        if !value.IsObject(fm):
+            front_out = value.Value {}
+        else:
+            front_out = fm
+        end
     end
 end
