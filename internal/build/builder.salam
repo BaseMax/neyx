@@ -236,7 +236,7 @@ pub func Run(args: Vector<str>):
     flag.AddBool(fs, "drafts", "", false, "Include draft content")
     flag.AddBool(fs, "pretty", "", false, "Skip HTML/XML minification")
     flag.AddBool(fs, "json", "", false, "Print a JSON build summary instead of human output")
-    flag.AddBool(fs, "no-images", "", false, "Skip WebP image generation")
+    flag.AddBool(fs, "no-images", "", false, "Skip responsive image generation")
     flag.Parse(fs, args)
     include_drafts := flag.GetBool(fs, "drafts")
     do_minify := !flag.GetBool(fs, "pretty")
@@ -244,6 +244,11 @@ pub func Run(args: Vector<str>):
     skip_images := flag.GetBool(fs, "no-images")
 
     site := config.Load("neyx.config.yml")
+
+    if site.hook_before_build != "":
+        if !quiet: println "  running before_build hook" end
+        os.Run(site.hook_before_build)
+    end
 
     if !os.IsDir(site.content_dir):
         printerrln "neyx: no", site.content_dir, "directory - nothing to build"
@@ -319,6 +324,11 @@ pub func Run(args: Vector<str>):
 
     if os.IsDir(site.static_dir):
         os.CopyTree(site.static_dir, site.output)
+    end
+
+    if site.hook_after_build != "":
+        if !quiet: println "  running after_build hook" end
+        os.Run(site.hook_after_build)
     end
 
     elapsed_ms := time.SinceMs(start_ns)

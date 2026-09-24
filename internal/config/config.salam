@@ -21,6 +21,8 @@ pub struct Site:
     pub languages: Vector<str> = Vector {} as Vector<str>
     pub optimize_images: bool = true
     pub theme: str = ""
+    pub hook_before_build: str = ""
+    pub hook_after_build: str = ""
     pub data: value.Value = value.Value {}
 end
 
@@ -43,6 +45,13 @@ func bool_field(obj: value.Value, key: str, def: bool): bool:
     v := value.ObjectGetOk(obj, key, ok)
     if !ok || !value.IsBool(v): ret def end
     ret value.AsBool(v)
+end
+
+func nested_str_field(obj: value.Value, section: str, key: str, def: str): str:
+    mut ok := false
+    sec := value.ObjectGetOk(obj, section, ok)
+    if !ok || !value.IsObject(sec): ret def end
+    ret str_field(sec, key, def)
 end
 
 func str_array_field(obj: value.Value, key: str): Vector<str>:
@@ -88,6 +97,8 @@ pub func Load(path: str): Site:
     site.languages = str_array_field(root, "languages")
     site.optimize_images = bool_field(root, "optimize_images", site.optimize_images)
     site.theme = str_field(root, "theme", site.theme)
+    site.hook_before_build = nested_str_field(root, "hooks", "before_build", "")
+    site.hook_after_build = nested_str_field(root, "hooks", "after_build", "")
 
     value.ObjectSet(root, "title", value.ValueString(site.title))
     value.ObjectSet(root, "description", value.ValueString(site.description))
