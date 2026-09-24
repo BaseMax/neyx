@@ -1,0 +1,61 @@
+package content
+
+import os
+import io
+import str
+import p "page.salam"
+import fm "frontmatter.salam"
+import markdown "../markdown/markdown.salam"
+
+func route_for(no_ext: str): str:
+    slash := str.LastIndex(no_ext, "/")
+    mut base := no_ext
+    mut dir := ""
+    if slash >= 0:
+        dir = no_ext.substr(0, slash)
+        base = no_ext.substr(slash + 1, no_ext.len() - slash - 1)
+    end
+    if base == "index":
+        if dir == "": ret "/" end
+        ret "/" + dir + "/"
+    end
+    if dir == "": ret "/" + base + "/" end
+    ret "/" + dir + "/" + base + "/"
+end
+
+func load_page(dir: str, path: str): p.Page:
+    mut page := p.Page { source_path = path }
+
+    no_ext := str.TrimSuffix(path.substr(dir.len() + 1, path.len() - dir.len() - 1), ".md")
+    page.route = route_for(no_ext)
+
+    text := io.ReadFile(path)
+    mut front := page.front
+    mut body := ""
+    fm.Split(text, front, body)
+    page.front = front
+
+    page.tmpl = p.StrField(page.front, "layout", "default")
+
+    mut toc := ""
+    mut html := ""
+    markdown.ToHtml(body, toc, html)
+    page.toc_html = toc
+    page.content_html = html
+
+    ret page
+end
+
+pub func LoadAll(dir: str): Vector<p.Page>:
+    mut out := Vector {} as Vector<p.Page>
+    if !os.IsDir(dir): ret out end
+
+    files := os.Walk(dir)
+    defer files.free()
+    each path in files:
+        if str.EndsWith(path, ".md"):
+            out.push(load_page(dir, path))
+        end
+    end
+    ret out
+end

@@ -1,0 +1,23 @@
+package contentpage
+
+import encoding.value
+
+pub struct Page:
+    pub source_path: str = ""
+    pub route: str = "/"
+    pub tmpl: str = "default"
+    pub front: value.Value = value.Value {}
+    pub content_html: str = ""
+    pub toc_html: str = ""
+end
+
+pub func StrField(obj: value.Value, key: str, def: str): str:
+    mut ok := false
+    v := value.ObjectGetOk(obj, key, ok)
+    if !ok || !value.IsString(v): ret def end
+    ret value.AsString(v)
+end
+
+pub func Title(p: Page): str: ret StrField(p.front, "title", "") end
+pub func Description(p: Page): str: ret StrField(p.front, "description", "") end
+pub func Date(p: Page): str: ret StrField(p.front, "date", "") end

@@ -1,14 +1,17 @@
 package build
 
 import config "../config/config.salam"
-import markdown "../markdown/markdown.salam"
+import content "../content/loader.salam"
+import p "../content/page.salam"
 
 pub func Run(_args: Vector<str>):
     site := config.Load("neyx.config.yml")
     println "building", site.title, "->", site.output
 
-    mut toc := ""
-    mut html := ""
-    markdown.ToHtml("# Hello\n\nThis is **bold** and *em* and `code`.\n\n- one\n- two\n\n> a quote\n", toc, html)
-    println html
+    pages := content.LoadAll(site.content_dir)
+    defer pages.free()
+    repeat pages.len() with i:
+        page := pages.get(i)
+        println page.route, "<-", page.source_path, "title:", p.Title(page), "layout:", page.tmpl
+    end
 end

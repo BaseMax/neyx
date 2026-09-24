@@ -1,0 +1,51 @@
+package frontmatter
+
+import str
+import collections
+import encoding.value
+import encoding.encerr
+import encoding.yaml
+
+pub func Split(text: str, front_out &: value.Value, body_out &: str):
+    lines := str.Split(text, "\n")
+    defer lines.free()
+    n := lines.len()
+
+    if n == 0 || str.Trim(lines.get(0)) != "---":
+        front_out = value.Value {}
+        body_out = text
+        ret
+    end
+
+    mut end_idx := 0 - 1
+    mut i := 1
+    while i < n:
+        if str.Trim(lines.get(i)) == "---":
+            end_idx = i
+            break
+        end
+        i += 1
+    end
+
+    if end_idx < 0:
+        front_out = value.Value {}
+        body_out = text
+        ret
+    end
+
+    fm_lines := collections.slice(lines, 1, end_idx - 1)
+    defer fm_lines.free()
+    fm_text := str.Join(fm_lines, "\n")
+
+    body_lines := collections.slice(lines, end_idx + 1, n - end_idx - 1)
+    defer body_lines.free()
+    body_out = str.Join(body_lines, "\n")
+
+    mut err := encerr.NoError()
+    fm := yaml.Decode(fm_text, err)
+    if err.kind != encerr.KindNone || !value.IsObject(fm):
+        front_out = value.Value {}
+    else:
+        front_out = fm
+    end
+end
