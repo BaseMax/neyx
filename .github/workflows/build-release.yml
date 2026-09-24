@@ -114,7 +114,7 @@ jobs:
           printf -- '---\ntitle: "Home"\n---\n\n# Hot Reload Marker 4f9c2\n' > content/index.md
 
           reloaded=0
-          for _ in $(seq 1 30); do
+          for _ in $(seq 1 60); do
             if curl -sf http://localhost:4567/ 2>/dev/null | grep -q "Hot Reload Marker 4f9c2"; then
               reloaded=1
               break
@@ -123,8 +123,12 @@ jobs:
           done
 
           kill "$dev_pid" 2>/dev/null || true
+          if command -v taskkill >/dev/null 2>&1; then
+            taskkill //F //T //PID "$dev_pid" >/dev/null 2>&1 || true
+          fi
+          sleep 1
           cd ..
-          rm -rf hot-reload-test
+          rm -rf hot-reload-test || true
 
           if [ "$reloaded" -ne 1 ]; then
             echo "::error::editing content did not trigger an automatic rebuild"
