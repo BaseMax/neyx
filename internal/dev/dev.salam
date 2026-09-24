@@ -4,6 +4,7 @@ import os
 import str
 import conv
 import flag
+import net.tcp
 import buildcmd "../build/builder.salam"
 import config "../config/config.salam"
 
@@ -100,6 +101,16 @@ pub func Run(args: Vector<str>):
 
     site := config.Load("neyx.config.yml")
     port := flag.GetStr(fs, "port")
+    port_num := conv.Atoi(port)
+
+    probe := tcp.Dial("127.0.0.1", port_num)
+    if tcp.ConnOk(probe):
+        tcp.Close(probe)
+        printerrln "neyx: port " + port + " is already in use."
+        printerrln "  Another 'neyx dev' or 'salam serve' may still be running in the background."
+        printerrln "  Stop it, or run with a different port: neyx dev --port=<port>"
+        os.Exit(1)
+    end
 
     self_args := os.Args()
     self_path := self_args.get(0)
