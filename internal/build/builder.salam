@@ -18,7 +18,17 @@ import data "../data/data.salam"
 import minify "../minify/minify.salam"
 import encoding.json
 
-const DEFAULT_LAYOUT := "<!doctype html>\n<html lang=\"{{ site.language }}\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>{{ title }}</title>\n{{ if description }}<meta name=\"description\" content=\"{{ description }}\">{{ end }}\n<link rel=\"canonical\" href=\"{{ site.url }}{{ url }}\">\n<meta property=\"og:title\" content=\"{{ title }}\">\n{{ if description }}<meta property=\"og:description\" content=\"{{ description }}\">{{ end }}\n<meta property=\"og:url\" content=\"{{ site.url }}{{ url }}\">\n<meta property=\"og:type\" content=\"website\">\n<meta name=\"twitter:card\" content=\"summary\">\n</head>\n<body>\n{{ & content }}\n</body>\n</html>\n"
+const DEFAULT_LAYOUT := "<!doctype html>\n<html lang=\"{{ lang }}\" dir=\"{{ dir }}\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>{{ title }}</title>\n{{ if description }}<meta name=\"description\" content=\"{{ description }}\">{{ end }}\n<link rel=\"canonical\" href=\"{{ site.url }}{{ url }}\">\n<meta property=\"og:title\" content=\"{{ title }}\">\n{{ if description }}<meta property=\"og:description\" content=\"{{ description }}\">{{ end }}\n<meta property=\"og:url\" content=\"{{ site.url }}{{ url }}\">\n<meta property=\"og:type\" content=\"website\">\n<meta name=\"twitter:card\" content=\"summary\">\n</head>\n<body>\n{{ & content }}\n</body>\n</html>\n"
+
+func text_dir(lang: str): str:
+    if lang == "fa" || lang == "ar" || lang == "he" || lang == "ur": ret "rtl" end
+    ret "ltr"
+end
+
+func effective_lang(site: config.Site, page: p.Page): str:
+    if page.lang != "": ret page.lang end
+    ret site.language
+end
 
 func layout_for(site: config.Site, name: str): str:
     path := site.layouts_dir + "/" + name + ".html"
@@ -65,6 +75,7 @@ func pages_value(pages: Vector<p.Page>): value.Value:
 end
 
 func render_page(site: config.Site, page: p.Page, all_val: value.Value, posts_val: value.Value, data_val: value.Value): str:
+    lang := effective_lang(site, page)
     mut root := value.ValueClone(page.front)
     value.ObjectSet(root, "content", value.ValueString(page.content_html))
     value.ObjectSet(root, "url", value.ValueString(page.route))
@@ -72,6 +83,8 @@ func render_page(site: config.Site, page: p.Page, all_val: value.Value, posts_va
     value.ObjectSet(root, "pages", all_val)
     value.ObjectSet(root, "posts", posts_val)
     value.ObjectSet(root, "data", data_val)
+    value.ObjectSet(root, "lang", value.ValueString(lang))
+    value.ObjectSet(root, "dir", value.ValueString(text_dir(lang)))
     tpl_text := layout_for(site, page.tmpl)
     ret tmpl.Render(tpl_text, root)
 end
@@ -116,6 +129,7 @@ func write_paginated(site: config.Site, page: p.Page, posts: Vector<p.Page>, all
         slice_val := posts_slice_value(posts, idx * size, size)
         route := page_num_route(page.route, page_num)
 
+        lang := effective_lang(site, page)
         mut root := value.ValueClone(page.front)
         value.ObjectSet(root, "content", value.ValueString(page.content_html))
         value.ObjectSet(root, "url", value.ValueString(route))
@@ -123,6 +137,8 @@ func write_paginated(site: config.Site, page: p.Page, posts: Vector<p.Page>, all
         value.ObjectSet(root, "pages", all_val)
         value.ObjectSet(root, "posts", slice_val)
         value.ObjectSet(root, "data", data_val)
+        value.ObjectSet(root, "lang", value.ValueString(lang))
+        value.ObjectSet(root, "dir", value.ValueString(text_dir(lang)))
 
         mut pg := value.NewValueObject()
         value.ObjectSet(pg, "page", value.ValueInt(page_num as i64))
@@ -198,7 +214,7 @@ pub func Run(args: Vector<str>):
         os.Exit(1)
     end
 
-    mut pages := content.LoadAll(site.content_dir)
+    mut pages := content.LoadAll(site.content_dir, site.languages)
     if !include_drafts:
         pages = drop_drafts(pages)
     end

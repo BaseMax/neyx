@@ -6,6 +6,7 @@ pub struct Page:
     pub source_path: str = ""
     pub route: str = "/"
     pub tmpl: str = "default"
+    pub lang: str = ""
     pub front: value.Value = value.Value {}
     pub content_html: str = ""
     pub toc_html: str = ""

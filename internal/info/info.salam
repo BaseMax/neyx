@@ -7,7 +7,7 @@ const VERSION := "0.1.0"
 
 pub func Run(_args: Vector<str>):
     site := config.Load("neyx.config.yml")
-    pages := content.LoadAll(site.content_dir)
+    pages := content.LoadAll(site.content_dir, site.languages)
     defer pages.free()
 
     println "Project:  ", site.title

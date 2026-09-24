@@ -3,6 +3,7 @@ package content
 import os
 import io
 import str
+import collections
 import p "page.salam"
 import fm "frontmatter.salam"
 import markdown "../markdown/markdown.salam"
@@ -23,11 +24,49 @@ func route_for(no_ext: str): str:
     ret "/" + dir + "/" + base + "/"
 end
 
-func load_page(dir: str, path: str): p.Page:
+func split_lang(no_ext: str, languages: Vector<str>, lang_out &: str, rest_out &: str):
+    if languages.len() == 0:
+        lang_out = ""
+        rest_out = no_ext
+        ret
+    end
+
+    slash := str.IndexOf(no_ext, "/")
+    mut first := no_ext
+    if slash >= 0: first = no_ext.substr(0, slash) end
+
+    if collections.contains(languages, first):
+        lang_out = first
+        if slash >= 0:
+            rest_out = no_ext.substr(slash + 1, no_ext.len() - slash - 1)
+        else:
+            rest_out = "index"
+        end
+        ret
+    end
+
+    lang_out = ""
+    rest_out = no_ext
+end
+
+func load_page(dir: str, path: str, languages: Vector<str>): p.Page:
     mut page := p.Page { source_path = path }
 
     no_ext := str.TrimSuffix(path.substr(dir.len() + 1, path.len() - dir.len() - 1), ".md")
-    page.route = route_for(no_ext)
+    mut lang := ""
+    mut rest := no_ext
+    split_lang(no_ext, languages, lang, rest)
+    page.lang = lang
+
+    mut route := route_for(rest)
+    if lang != "":
+        if route == "/":
+            route = "/" + lang + "/"
+        else:
+            route = "/" + lang + route
+        end
+    end
+    page.route = route
 
     text := io.ReadFile(path)
     mut front := page.front
@@ -46,7 +85,7 @@ func load_page(dir: str, path: str): p.Page:
     ret page
 end
 
-pub func LoadAll(dir: str): Vector<p.Page>:
+pub func LoadAll(dir: str, languages: Vector<str>): Vector<p.Page>:
     mut out := Vector {} as Vector<p.Page>
     if !os.IsDir(dir): ret out end
 
@@ -54,7 +93,7 @@ pub func LoadAll(dir: str): Vector<p.Page>:
     defer files.free()
     each path in files:
         if str.EndsWith(path, ".md"):
-            out.push(load_page(dir, path))
+            out.push(load_page(dir, path, languages))
         end
     end
     ret out

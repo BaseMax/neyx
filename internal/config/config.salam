@@ -18,6 +18,7 @@ pub struct Site:
     pub data_dir: str = "data"
     pub static_dir: str = "static"
     pub pagination_size: int = 10
+    pub languages: Vector<str> = Vector {} as Vector<str>
     pub data: value.Value = value.Value {}
 end
 
@@ -33,6 +34,18 @@ func int_field(obj: value.Value, key: str, def: int): int:
     v := value.ObjectGetOk(obj, key, ok)
     if !ok || !value.IsInt(v): ret def end
     ret value.AsInt(v) as int
+end
+
+func str_array_field(obj: value.Value, key: str): Vector<str>:
+    mut out := Vector {} as Vector<str>
+    mut ok := false
+    v := value.ObjectGetOk(obj, key, ok)
+    if !ok || !value.IsArray(v): ret out end
+    repeat value.ArrayLen(v) with i:
+        item := value.ArrayGet(v, i)
+        if value.IsString(item): out.push(value.AsString(item)) end
+    end
+    ret out
 end
 
 pub func Load(path: str): Site:
@@ -63,6 +76,7 @@ pub func Load(path: str): Site:
     site.data_dir = str_field(root, "data", site.data_dir)
     site.static_dir = str_field(root, "static", site.static_dir)
     site.pagination_size = int_field(root, "pagination_size", site.pagination_size)
+    site.languages = str_array_field(root, "languages")
 
     value.ObjectSet(root, "title", value.ValueString(site.title))
     value.ObjectSet(root, "description", value.ValueString(site.description))

@@ -86,7 +86,7 @@ pub func Run(_args: Vector<str>):
 
     mut problems := 0
 
-    pages := content.LoadAll(site.content_dir)
+    pages := content.LoadAll(site.content_dir, site.languages)
     defer pages.free()
     mut seen_routes := Vector {} as Vector<str>
     defer seen_routes.free()
