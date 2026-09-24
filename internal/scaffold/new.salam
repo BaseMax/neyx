@@ -12,6 +12,24 @@ const INDEX_TPL := "---\ntitle: \"Home\"\ndescription: \"Welcome to my new Neyx 
 
 const LAYOUT_TPL := "<!doctype html>\n<html lang=\"{{ lang }}\" dir=\"{{ dir }}\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>{{ title }} - {{ site.title }}</title>\n{{ if description }}<meta name=\"description\" content=\"{{ description }}\">{{ end }}\n<link rel=\"canonical\" href=\"{{ site.url }}{{ url }}\">\n<meta property=\"og:title\" content=\"{{ title }}\">\n{{ if description }}<meta property=\"og:description\" content=\"{{ description }}\">{{ end }}\n<meta property=\"og:url\" content=\"{{ site.url }}{{ url }}\">\n<meta property=\"og:type\" content=\"website\">\n<meta name=\"twitter:card\" content=\"summary\">\n</head>\n<body>\n<main>\n{{ & content }}\n</main>\n</body>\n</html>\n"
 
+const GITIGNORE_TPL := "/dist\n"
+
+func join(dir: str, rest: str): str:
+    if dir == "": ret rest end
+    ret dir + "/" + rest
+end
+
+func scaffold_into(dir: str):
+    os.MkdirAll(join(dir, "content"))
+    os.MkdirAll(join(dir, "layouts"))
+    os.MkdirAll(join(dir, "assets"))
+
+    io.WriteFile(join(dir, "neyx.config.yml"), CONFIG_TPL)
+    io.WriteFile(join(dir, "content/index.md"), INDEX_TPL)
+    io.WriteFile(join(dir, "layouts/default.html"), LAYOUT_TPL)
+    io.WriteFile(join(dir, ".gitignore"), GITIGNORE_TPL)
+end
+
 func run_post(args: Vector<str>):
     if args.len() < 2:
         printerrln "usage: neyx new post <title>"
@@ -53,20 +71,29 @@ pub func Run(args: Vector<str>):
         os.Exit(1)
     end
 
-    os.MkdirAll(name + "/content")
-    os.MkdirAll(name + "/layouts")
-    os.MkdirAll(name + "/assets")
-
-    io.WriteFile(name + "/neyx.config.yml", CONFIG_TPL)
-    io.WriteFile(name + "/content/index.md", INDEX_TPL)
-    io.WriteFile(name + "/layouts/default.html", LAYOUT_TPL)
+    scaffold_into(name)
 
     println "Created project '" + name + "':"
     println "  " + name + "/neyx.config.yml"
     println "  " + name + "/content/index.md"
     println "  " + name + "/layouts/default.html"
+    println "  " + name + "/.gitignore"
     println ""
     println "Next steps:"
     println "  cd " + name
+    println "  neyx dev"
+end
+
+pub func Init(_args: Vector<str>):
+    if os.Exists("neyx.config.yml"):
+        printerrln "neyx: neyx.config.yml already exists here"
+        os.Exit(1)
+    end
+
+    scaffold_into("")
+
+    println "Initialized a Neyx project in the current directory."
+    println ""
+    println "Next steps:"
     println "  neyx dev"
 end

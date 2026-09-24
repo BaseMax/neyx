@@ -24,6 +24,7 @@ end
 func new_app(): cli.App:
     mut app := cli.New("neyx", "A lightweight, ultra-fast static site generator built with Salam.", VERSION)
     cli.Register(app, "new", "Create a new Neyx project")
+    cli.Register(app, "init", "Initialize a Neyx project in the current directory")
     cli.Register(app, "dev", "Start the development server")
     cli.Register(app, "build", "Build the site for production")
     cli.Register(app, "preview", "Preview the production build")
@@ -54,6 +55,11 @@ pub func Run(process_argv: Vector<str>):
 
     if cmd == "new":
         newcmd.Run(rest)
+        ret
+    end
+
+    if cmd == "init":
+        newcmd.Init(rest)
         ret
     end
 
