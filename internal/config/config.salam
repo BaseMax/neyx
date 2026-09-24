@@ -19,6 +19,8 @@ pub struct Site:
     pub static_dir: str = "static"
     pub pagination_size: int = 10
     pub languages: Vector<str> = Vector {} as Vector<str>
+    pub optimize_images: bool = true
+    pub theme: str = ""
     pub data: value.Value = value.Value {}
 end
 
@@ -34,6 +36,13 @@ func int_field(obj: value.Value, key: str, def: int): int:
     v := value.ObjectGetOk(obj, key, ok)
     if !ok || !value.IsInt(v): ret def end
     ret value.AsInt(v) as int
+end
+
+func bool_field(obj: value.Value, key: str, def: bool): bool:
+    mut ok := false
+    v := value.ObjectGetOk(obj, key, ok)
+    if !ok || !value.IsBool(v): ret def end
+    ret value.AsBool(v)
 end
 
 func str_array_field(obj: value.Value, key: str): Vector<str>:
@@ -77,6 +86,8 @@ pub func Load(path: str): Site:
     site.static_dir = str_field(root, "static", site.static_dir)
     site.pagination_size = int_field(root, "pagination_size", site.pagination_size)
     site.languages = str_array_field(root, "languages")
+    site.optimize_images = bool_field(root, "optimize_images", site.optimize_images)
+    site.theme = str_field(root, "theme", site.theme)
 
     value.ObjectSet(root, "title", value.ValueString(site.title))
     value.ObjectSet(root, "description", value.ValueString(site.description))

@@ -16,6 +16,7 @@ import feed "../feed/feed.salam"
 import taxonomy "../taxonomy/taxonomy.salam"
 import data "../data/data.salam"
 import minify "../minify/minify.salam"
+import imagepipe "../imagepipe/imagepipe.salam"
 import encoding.json
 
 const DEFAULT_LAYOUT := "<!doctype html>\n<html lang=\"{{ lang }}\" dir=\"{{ dir }}\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>{{ title }}</title>\n{{ if description }}<meta name=\"description\" content=\"{{ description }}\">{{ end }}\n<link rel=\"canonical\" href=\"{{ site.url }}{{ url }}\">\n<meta property=\"og:title\" content=\"{{ title }}\">\n{{ if description }}<meta property=\"og:description\" content=\"{{ description }}\">{{ end }}\n<meta property=\"og:url\" content=\"{{ site.url }}{{ url }}\">\n<meta property=\"og:type\" content=\"website\">\n<meta name=\"twitter:card\" content=\"summary\">\n</head>\n<body>\n{{ & content }}\n</body>\n</html>\n"
@@ -226,10 +227,12 @@ pub func Run(args: Vector<str>):
     flag.AddBool(fs, "drafts", "", false, "Include draft content")
     flag.AddBool(fs, "pretty", "", false, "Skip HTML/XML minification")
     flag.AddBool(fs, "json", "", false, "Print a JSON build summary instead of human output")
+    flag.AddBool(fs, "no-images", "", false, "Skip WebP image generation")
     flag.Parse(fs, args)
     include_drafts := flag.GetBool(fs, "drafts")
     do_minify := !flag.GetBool(fs, "pretty")
     quiet := flag.GetBool(fs, "json")
+    skip_images := flag.GetBool(fs, "no-images")
 
     site := config.Load("neyx.config.yml")
 
@@ -266,6 +269,11 @@ pub func Run(args: Vector<str>):
 
     if os.IsDir(site.assets_dir):
         os.CopyTree(site.assets_dir, site.output + "/assets")
+    end
+
+    if site.optimize_images && !skip_images:
+        image_count := imagepipe.Process(site.output + "/assets")
+        if !quiet && image_count > 0: println "  generated", image_count, "optimized image(s)" end
     end
 
     taxonomy.Build(site, pages, do_minify)

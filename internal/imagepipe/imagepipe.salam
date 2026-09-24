@@ -1,0 +1,69 @@
+package imagepipe
+
+import os
+import str
+import conv
+import filepath
+import image
+
+func is_jpeg(name: str): bool:
+    if str.EndsWith(name, ".jpg"): ret true end
+    ret str.EndsWith(name, ".jpeg")
+end
+
+func is_png(name: str): bool:
+    ret str.EndsWith(name, ".png")
+end
+
+func widths(): Vector<int>:
+    mut out := Vector {} as Vector<int>
+    out.push(480)
+    out.push(960)
+    out.push(1440)
+    ret out
+end
+
+pub func Process(output_assets_dir: str): int:
+    mut count := 0
+    if !os.IsDir(output_assets_dir): ret count end
+
+    files := os.Walk(output_assets_dir)
+    defer files.free()
+    ws := widths()
+    defer ws.free()
+
+    each path in files:
+        is_jpg := is_jpeg(path)
+        is_png_file := is_png(path)
+        if is_jpg || is_png_file:
+            mut ok := false
+            img := image.Open(path, ok)
+            if ok:
+                if is_jpg:
+                    if image.SaveJPEG(img, path, 82): count += 1 end
+                end
+
+                ext := filepath.Ext(path)
+                base := path.substr(0, path.len() - ext.len())
+
+                repeat ws.len() with i:
+                    w := ws.get(i)
+                    if img.width > w && img.width > 0:
+                        h := (img.height * w) / img.width
+                        resized := image.ResizeBilinearFilter(img, w, h)
+                        variant_path := base + "-" + conv.FormatInt(w as i64) + ext
+
+                        mut saved := false
+                        if is_jpg:
+                            saved = image.SaveJPEG(resized, variant_path, 82)
+                        else:
+                            saved = image.SavePNG(resized, variant_path)
+                        end
+                        if saved: count += 1 end
+                    end
+                end
+            end
+        end
+    end
+    ret count
+end

@@ -13,6 +13,7 @@ pub func Run(args: Vector<str>):
 
     mut build_args := Vector {} as Vector<str>
     build_args.push("--pretty")
+    build_args.push("--no-images")
     if flag.GetBool(fs, "drafts"):
         build_args.push("--drafts")
     end
