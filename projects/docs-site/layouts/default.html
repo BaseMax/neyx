@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="{{ lang }}" dir="{{ dir }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ title }} - {{ site.title }}</title>
+{{ if description }}<meta name="description" content="{{ description }}">{{ end }}
+<link rel="canonical" href="{{ site.url }}{{ url }}">
+<link rel="stylesheet" href="/assets/style.css">
+<script src="/assets/neyx-search.js"></script>
+</head>
+<body>
+<div class="shell">
+<aside class="sidebar">
+<a class="wordmark" href="/">{{ site.title }}</a>
+<div class="search-box">
+<input id="search-input" type="search" placeholder="Search docs...">
+<ul id="search-results"></ul>
+</div>
+{{ each section in data.sidebar.sections }}
+<div class="nav-section">
+<h3>{{ section.title }}</h3>
+<ul>
+{{ each item in section.items }}<li><a href="{{ item.url }}">{{ item.title }}</a></li>{{ end }}
+</ul>
+</div>
+{{ end }}
+</aside>
+<main class="content">
+{{ if toc }}<nav class="toc"><strong>On this page</strong><ul>{{ & toc }}</ul></nav>{{ end }}
+<article>
+{{ & content }}
+</article>
+</main>
+</div>
+<script>NeyxSearch('#search-input', '#search-results');</script>
+</body>
+</html>

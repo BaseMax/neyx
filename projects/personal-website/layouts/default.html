@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="{{ lang }}" dir="{{ dir }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ title }} - {{ site.title }}</title>
+{{ if description }}<meta name="description" content="{{ description }}">{{ end }}
+<link rel="canonical" href="{{ site.url }}{{ url }}">
+<meta property="og:title" content="{{ title }}">
+{{ if description }}<meta property="og:description" content="{{ description }}">{{ end }}
+<meta property="og:url" content="{{ site.url }}{{ url }}">
+<meta property="og:type" content="website">
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+<header class="site-header">
+<a class="wordmark" href="/">{{ site.title }}</a>
+<nav>
+{{ each item in data.nav.items }}<a href="{{ item.url }}">{{ item.title }}</a>{{ end }}
+</nav>
+</header>
+<main>
+{{ & content }}
+</main>
+<footer class="site-footer">
+<p>{{ site.title }} &middot; built with <a href="https://github.com/BaseMax/neyx">Neyx</a></p>
+</footer>
+</body>
+</html>

@@ -1,0 +1,6 @@
+title: "Notebook"
+description: "A small multilingual notebook."
+url: "https://notebook.example"
+language: "en"
+languages: ["en", "fa", "ar"]
+pagination_size: 5

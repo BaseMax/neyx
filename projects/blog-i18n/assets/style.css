@@ -1,0 +1,124 @@
+:root {
+  --bg: #14161a;
+  --ink: #eef0f3;
+  --muted: #9aa1ab;
+  --accent: #6fc3ff;
+  --card: #1e2126;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, "Segoe UI", Tahoma, Arial, sans-serif;
+  line-height: 1.7;
+}
+
+.site-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  max-width: 42rem;
+  margin: 0 auto;
+  padding: 1.75rem 1.25rem;
+}
+
+.wordmark {
+  font-weight: 700;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.lang-switch {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  font-size: 0.85rem;
+}
+
+.lang-current {
+  color: var(--accent);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.lang-switch a {
+  color: var(--muted);
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.lang-switch a:hover {
+  color: var(--accent);
+}
+
+.page {
+  max-width: 42rem;
+  margin: 0 auto;
+  padding: 0 1.25rem 3rem;
+}
+
+.post-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 1rem;
+}
+
+.post-card {
+  background: var(--card);
+  border-radius: 0.6rem;
+  padding: 1.1rem 1.25rem;
+}
+
+.post-title {
+  font-weight: 700;
+  color: var(--ink);
+  text-decoration: none;
+  font-size: 1.1rem;
+}
+
+.post-date {
+  display: block;
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin: 0.15rem 0 0.5rem;
+}
+
+.post-card p {
+  margin: 0;
+  color: var(--muted);
+}
+
+h1 {
+  font-size: 1.8rem;
+}
+
+.post-meta {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+a {
+  color: var(--accent);
+}
+
+.site-footer {
+  max-width: 42rem;
+  margin: 0 auto;
+  padding: 2rem 1.25rem 3rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+  border-top: 1px solid var(--card);
+}
+
+.site-footer a {
+  color: var(--muted);
+}

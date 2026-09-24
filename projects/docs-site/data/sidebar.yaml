@@ -1,0 +1,13 @@
+sections:
+  - title: "Guide"
+    items:
+      - title: "Introduction"
+        url: "/"
+      - title: "Getting started"
+        url: "/getting-started/"
+      - title: "Configuration"
+        url: "/configuration/"
+  - title: "Guides"
+    items:
+      - title: "Deployment"
+        url: "/guides/deployment/"

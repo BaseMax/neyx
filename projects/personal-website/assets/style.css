@@ -1,0 +1,94 @@
+:root {
+  --bg: #faf6f0;
+  --ink: #2b2420;
+  --muted: #7a6f63;
+  --accent: #b5502f;
+  --rule: #e6ddd0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  line-height: 1.6;
+}
+
+.site-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 1rem;
+  max-width: 42rem;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem 1.5rem;
+  border-bottom: 1px solid var(--rule);
+}
+
+.wordmark {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.site-header nav a {
+  color: var(--muted);
+  text-decoration: none;
+  margin-left: 1.25rem;
+  font-size: 0.95rem;
+}
+
+.site-header nav a:hover {
+  color: var(--accent);
+}
+
+main {
+  max-width: 42rem;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem;
+}
+
+h1 {
+  font-size: 2rem;
+  margin-top: 0;
+}
+
+h2 {
+  font-size: 1.35rem;
+  margin-top: 2.25rem;
+  color: var(--ink);
+}
+
+a {
+  color: var(--accent);
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+td, th {
+  padding: 0.5rem 0.75rem 0.5rem 0;
+  border-bottom: 1px solid var(--rule);
+  text-align: left;
+}
+
+.site-footer {
+  max-width: 42rem;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 3rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+  border-top: 1px solid var(--rule);
+}
+
+.site-footer a {
+  color: var(--muted);
+}

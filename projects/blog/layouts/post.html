@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="{{ lang }}" dir="{{ dir }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ title }} - {{ site.title }}</title>
+{{ if description }}<meta name="description" content="{{ description }}">{{ end }}
+<link rel="canonical" href="{{ site.url }}{{ url }}">
+<meta property="og:title" content="{{ title }}">
+{{ if description }}<meta property="og:description" content="{{ description }}">{{ end }}
+<meta property="og:url" content="{{ site.url }}{{ url }}">
+<meta property="og:type" content="article">
+<link rel="alternate" type="application/rss+xml" href="/feed.xml">
+<link rel="alternate" type="application/atom+xml" href="/atom.xml">
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+<header class="site-header">
+<a class="wordmark" href="/">{{ site.title }}</a>
+<nav>
+<a href="/">Posts</a>
+<a href="/tags/">Tags</a>
+<a href="/about/">About</a>
+<a href="/feed.xml">RSS</a>
+</nav>
+</header>
+<main class="page">
+<article>
+<p class="post-meta">{{ date }}</p>
+{{ if toc }}<nav class="toc"><ul>{{ & toc }}</ul></nav>{{ end }}
+{{ & content }}
+<p class="post-tags">
+{{ each tag in tags }}<a class="tag" href="/tags/{{ tag }}/">{{ tag }}</a>{{ end }}
+</p>
+</article>
+</main>
+<footer class="site-footer">
+<p>{{ site.title }} &middot; built with <a href="https://github.com/BaseMax/neyx">Neyx</a></p>
+</footer>
+</body>
+</html>

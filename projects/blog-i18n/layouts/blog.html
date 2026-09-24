@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="{{ lang }}" dir="{{ dir }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ site.title }}</title>
+{{ if description }}<meta name="description" content="{{ description }}">{{ end }}
+<link rel="canonical" href="{{ site.url }}{{ url }}">
+{{ each t in translations }}<link rel="alternate" hreflang="{{ t.lang }}" href="{{ site.url }}{{ t.url }}">{{ end }}
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+<header class="site-header">
+<a class="wordmark" href="{{ url }}">{{ site.title }}</a>
+<nav class="lang-switch">
+<span class="lang-current">{{ lang }}</span>
+{{ each t in translations }}<a href="{{ t.url }}">{{ t.lang }}</a>{{ end }}
+</nav>
+</header>
+<main class="page">
+<ul class="post-list">
+{{ each post in posts }}
+<li class="post-card">
+<a class="post-title" href="{{ post.url }}">{{ post.title }}</a>
+<span class="post-date">{{ post.date }}</span>
+<p>{{ post.description }}</p>
+</li>
+{{ end }}
+</ul>
+</main>
+<footer class="site-footer">
+<p>{{ site.title }} &middot; built with <a href="https://github.com/BaseMax/neyx">Neyx</a></p>
+</footer>
+</body>
+</html>
