@@ -68,6 +68,23 @@ coding assistant at it (Claude Code reads it automatically from the repo
 root) and it has everything needed to scaffold and build a real site with
 NeyX without reading any source code.
 
+## Screenshots
+
+**[personal-website](projects/personal-website/):** a single-language personal site: plain pages, a data-driven nav, no dates or collections.
+![personal-website](projects/personal-website/screenshot.webp)
+
+**[blog](projects/blog/):** a single-language blog: tags, pagination, drafts, RSS/Atom feeds, a table of contents.
+![blog](projects/blog/screenshot.webp)
+
+**[blog-i18n](projects/blog-i18n/):** the same blog in English, Persian, and Arabic: automatic RTL, hreflang links between translated posts, per-language collections.
+![blog-i18n](projects/blog-i18n/screenshot.webp)
+
+**[docs-site](projects/docs-site/):** documentation: a sidebar from a data file, nested pages, client-side search, raw HTML mixed with Markdown.
+![docs-site](projects/docs-site/screenshot.webp)
+
+**[landing-page](projects/landing-page/):** a one-page marketing site powered entirely by a theme (`themes/simple/`), with no project-level layouts or assets at all.
+![landing-page](projects/landing-page/screenshot.webp)
+
 ## Commands
 
 | Command | Description |
