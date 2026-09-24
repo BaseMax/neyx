@@ -1,9 +1,27 @@
 package markdown
 
 import str
+import conv
+import collections
 import esc "escape.salam"
 import inl "inline.salam"
 import blk "blocks.salam"
+
+func unique_id(used &: Vector<str>, base: str): str:
+    if !collections.contains(used, base):
+        used.push(base)
+        ret base
+    end
+    mut n := 2
+    while true:
+        candidate := base + "-" + conv.FormatInt(n as i64)
+        if !collections.contains(used, candidate):
+            used.push(candidate)
+            ret candidate
+        end
+        n += 1
+    end
+end
 
 pub func ToHtml(body: str, toc_out &: str, html_out &: str):
     mut html := str.NewBuilder()
@@ -31,6 +49,9 @@ pub func ToHtml(body: str, toc_out &: str, html_out &: str):
     defer list_items.free()
     mut quote_lines := Vector {} as Vector<str>
     defer quote_lines.free()
+
+    mut used_ids := Vector {} as Vector<str>
+    defer used_ids.free()
 
     n := lines.len()
     mut i := 0
@@ -111,7 +132,7 @@ pub func ToHtml(body: str, toc_out &: str, html_out &: str):
         if str.StartsWith(line, "# "):
             blk.FlushOpenBlock(html, para_lines, list_kind, list_items, quote_lines)
             text := str.Trim(line.substr(2, line.len() - 2))
-            id := blk.Slugify(text)
+            id := unique_id(used_ids, blk.Slugify(text))
             str.BufAppend(html, "<h1 id=\"")
             str.BufAppend(html, id)
             str.BufAppend(html, "\">")
@@ -124,7 +145,7 @@ pub func ToHtml(body: str, toc_out &: str, html_out &: str):
         if str.StartsWith(line, "## "):
             blk.FlushOpenBlock(html, para_lines, list_kind, list_items, quote_lines)
             text := str.Trim(line.substr(3, line.len() - 3))
-            id := blk.Slugify(text)
+            id := unique_id(used_ids, blk.Slugify(text))
             str.BufAppend(html, "<h2 id=\"")
             str.BufAppend(html, id)
             str.BufAppend(html, "\">")
@@ -142,7 +163,7 @@ pub func ToHtml(body: str, toc_out &: str, html_out &: str):
         if str.StartsWith(line, "### "):
             blk.FlushOpenBlock(html, para_lines, list_kind, list_items, quote_lines)
             text := str.Trim(line.substr(4, line.len() - 4))
-            id := blk.Slugify(text)
+            id := unique_id(used_ids, blk.Slugify(text))
             str.BufAppend(html, "<h3 id=\"")
             str.BufAppend(html, id)
             str.BufAppend(html, "\">")
