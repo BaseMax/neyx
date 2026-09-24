@@ -9,6 +9,7 @@ import devcmd "../dev/dev.salam"
 import previewcmd "../preview/preview.salam"
 import cleancmd "../clean/clean.salam"
 import checkcmd "../check/check.salam"
+import infocmd "../info/info.salam"
 
 const VERSION := "0.1.0"
 
@@ -25,6 +26,7 @@ func new_app(): cli.App:
     cli.Register(app, "preview", "Preview the production build")
     cli.Register(app, "clean", "Remove the output directory")
     cli.Register(app, "check", "Check the build for broken links and missing assets")
+    cli.Register(app, "info", "Show project information")
     ret app
 end
 
@@ -71,6 +73,11 @@ pub func Run(process_argv: Vector<str>):
 
     if cmd == "check":
         checkcmd.Run(rest)
+        ret
+    end
+
+    if cmd == "info":
+        infocmd.Run(rest)
         ret
     end
 

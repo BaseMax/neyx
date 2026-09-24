@@ -1,0 +1,20 @@
+package info
+
+import config "../config/config.salam"
+import content "../content/loader.salam"
+
+const VERSION := "0.1.0"
+
+pub func Run(_args: Vector<str>):
+    site := config.Load("neyx.config.yml")
+    pages := content.LoadAll(site.content_dir)
+    defer pages.free()
+
+    println "Project:  ", site.title
+    println "Neyx:     ", VERSION
+    println "Content:  ", pages.len(), "page(s) in", site.content_dir
+    println "Output:   ", site.output
+    println "Layouts:  ", site.layouts_dir
+    println "Assets:   ", site.assets_dir
+    println "Data:     ", site.data_dir
+end
