@@ -27,18 +27,21 @@ end
 
 pub func Load(path: str): Site:
     mut site := Site {}
-    if !os.Exists(path): ret site end
+    mut root := value.NewValueObject()
 
-    text := io.ReadFile(path)
-    mut err := encerr.NoError()
-    root := yaml.Decode(text, err)
-    if err.kind != encerr.KindNone:
-        printerrln "neyx: warning: could not parse", path, "-", err.message
-        ret site
+    if os.Exists(path):
+        text := io.ReadFile(path)
+        mut err := encerr.NoError()
+        decoded := yaml.Decode(text, err)
+        if err.kind != encerr.KindNone:
+            printerrln "neyx: warning: could not parse", path, "-", err.message
+        else:
+            if value.IsObject(decoded):
+                root = decoded
+            end
+        end
     end
-    if !value.IsObject(root): ret site end
 
-    site.data = root
     site.title = str_field(root, "title", site.title)
     site.description = str_field(root, "description", site.description)
     site.url = str_field(root, "url", site.url)
@@ -47,5 +50,11 @@ pub func Load(path: str): Site:
     site.content_dir = str_field(root, "content", site.content_dir)
     site.layouts_dir = str_field(root, "layouts", site.layouts_dir)
     site.assets_dir = str_field(root, "assets", site.assets_dir)
+
+    value.ObjectSet(root, "title", value.ValueString(site.title))
+    value.ObjectSet(root, "description", value.ValueString(site.description))
+    value.ObjectSet(root, "url", value.ValueString(site.url))
+    value.ObjectSet(root, "language", value.ValueString(site.language))
+    site.data = root
     ret site
 end
