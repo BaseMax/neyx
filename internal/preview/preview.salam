@@ -1,5 +1,21 @@
 package preview
 
-pub func Run(_args: Vector<str>):
-    println "neyx preview: not implemented yet"
+import os
+import flag
+import config "../config/config.salam"
+
+pub func Run(args: Vector<str>):
+    mut fs := flag.New("neyx preview", "Preview the production build")
+    flag.AddStr(fs, "port", "p", "3000", "Port to serve on")
+    flag.Parse(fs, args)
+
+    site := config.Load("neyx.config.yml")
+    if !os.IsDir(site.output):
+        printerrln "neyx: nothing built yet - run 'neyx build' first"
+        os.Exit(1)
+    end
+
+    port := flag.GetStr(fs, "port")
+    println "Serving", site.output, "at http://localhost:" + port
+    os.Run("salam serve " + site.output + " --port=" + port)
 end

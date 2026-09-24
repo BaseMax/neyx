@@ -1,5 +1,21 @@
 package dev
 
-pub func Run(_args: Vector<str>):
-    println "neyx dev: not implemented yet"
+import os
+import flag
+import buildcmd "../build/builder.salam"
+import config "../config/config.salam"
+
+pub func Run(args: Vector<str>):
+    mut fs := flag.New("neyx dev", "Start the development server")
+    flag.AddStr(fs, "port", "p", "3000", "Port to serve on")
+    flag.Parse(fs, args)
+
+    empty := Vector {} as Vector<str>
+    buildcmd.Run(empty)
+
+    site := config.Load("neyx.config.yml")
+    port := flag.GetStr(fs, "port")
+    println ""
+    println "Serving", site.output, "at http://localhost:" + port
+    os.Run("salam serve " + site.output + " --port=" + port)
 end
