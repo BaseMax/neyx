@@ -37,6 +37,7 @@ neyx preview
 | `neyx clean` | Remove the output directory |
 | `neyx check` | Check the build for broken links, missing assets, missing alt text, and duplicate routes |
 | `neyx routes` | List every computed route |
+| `neyx benchmark` | Time 3 repeated builds and report throughput |
 | `neyx info` | Show project information |
 | `neyx doctor` | Diagnose common project problems |
 | `neyx version` / `neyx help` | Version and usage |
