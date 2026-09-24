@@ -18,6 +18,15 @@ pub func StrField(obj: value.Value, key: str, def: str): str:
     ret value.AsString(v)
 end
 
+pub func BoolField(obj: value.Value, key: str, def: bool): bool:
+    mut ok := false
+    v := value.ObjectGetOk(obj, key, ok)
+    if !ok: ret def end
+    if value.IsBool(v): ret value.AsBool(v) end
+    if value.IsString(v): ret value.AsString(v) == "true" end
+    ret def
+end
+
 pub func Title(p: Page): str: ret StrField(p.front, "title", "") end
 pub func Description(p: Page): str: ret StrField(p.front, "description", "") end
 pub func Date(p: Page): str: ret StrField(p.front, "date", "") end

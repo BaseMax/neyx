@@ -3,6 +3,7 @@ package build
 import os
 import io
 import str
+import flag
 import encoding.value
 import config "../config/config.salam"
 import content "../content/loader.salam"
@@ -79,6 +80,21 @@ func write_page(site: config.Site, page: p.Page, all_val: value.Value, posts_val
     println "  wrote", dir + "index.html"
 end
 
+func is_draft(page: p.Page): bool:
+    ret p.BoolField(page.front, "draft", false)
+end
+
+func drop_drafts(pages: Vector<p.Page>): Vector<p.Page>:
+    mut out := Vector {} as Vector<p.Page>
+    repeat pages.len() with i:
+        page := pages.get(i)
+        if !is_draft(page):
+            out.push(page)
+        end
+    end
+    ret out
+end
+
 func write_robots(site: config.Site):
     mut text := "User-agent: *\nAllow: /\n"
     if site.url != "":
@@ -88,7 +104,12 @@ func write_robots(site: config.Site):
     println "  wrote", site.output + "/robots.txt"
 end
 
-pub func Run(_args: Vector<str>):
+pub func Run(args: Vector<str>):
+    mut fs := flag.New("neyx build", "Build the site for production")
+    flag.AddBool(fs, "drafts", "", false, "Include draft content")
+    flag.Parse(fs, args)
+    include_drafts := flag.GetBool(fs, "drafts")
+
     site := config.Load("neyx.config.yml")
 
     if !os.IsDir(site.content_dir):
@@ -96,7 +117,10 @@ pub func Run(_args: Vector<str>):
         os.Exit(1)
     end
 
-    pages := content.LoadAll(site.content_dir)
+    mut pages := content.LoadAll(site.content_dir)
+    if !include_drafts:
+        pages = drop_drafts(pages)
+    end
     defer pages.free()
     posts := posts_only(pages)
     defer posts.free()
