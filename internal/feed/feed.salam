@@ -1,0 +1,56 @@
+package feed
+
+import str
+import config "../config/config.salam"
+import p "../content/page.salam"
+import esc "../markdown/escape.salam"
+
+pub func Build(site: config.Site, posts: Vector<p.Page>): str:
+    mut b := str.NewBuilder()
+    defer str.BufFree(b)
+    str.BufAppend(b, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
+    str.BufAppend(b, "<rss version=\"2.0\"><channel>\n")
+    str.BufAppend(b, "  <title>")
+    str.BufAppend(b, esc.EscapeHtml(site.title))
+    str.BufAppend(b, "</title>\n")
+    str.BufAppend(b, "  <link>")
+    str.BufAppend(b, esc.EscapeHtml(site.url))
+    str.BufAppend(b, "</link>\n")
+    str.BufAppend(b, "  <description>")
+    str.BufAppend(b, esc.EscapeHtml(site.description))
+    str.BufAppend(b, "</description>\n")
+
+    repeat posts.len() with i:
+        page := posts.get(i)
+        link := site.url + page.route
+        str.BufAppend(b, "  <item>\n")
+        str.BufAppend(b, "    <title>")
+        str.BufAppend(b, esc.EscapeHtml(p.Title(page)))
+        str.BufAppend(b, "</title>\n")
+        str.BufAppend(b, "    <link>")
+        str.BufAppend(b, esc.EscapeHtml(link))
+        str.BufAppend(b, "</link>\n")
+        str.BufAppend(b, "    <guid>")
+        str.BufAppend(b, esc.EscapeHtml(link))
+        str.BufAppend(b, "</guid>\n")
+
+        desc := p.Description(page)
+        if desc != "":
+            str.BufAppend(b, "    <description>")
+            str.BufAppend(b, esc.EscapeHtml(desc))
+            str.BufAppend(b, "</description>\n")
+        end
+
+        date := p.Date(page)
+        if date != "":
+            str.BufAppend(b, "    <pubDate>")
+            str.BufAppend(b, esc.EscapeHtml(date))
+            str.BufAppend(b, "</pubDate>\n")
+        end
+
+        str.BufAppend(b, "  </item>\n")
+    end
+
+    str.BufAppend(b, "</channel></rss>\n")
+    ret str.BufStr(b)
+end
